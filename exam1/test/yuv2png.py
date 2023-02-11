@@ -45,6 +45,31 @@ def readYUV(file_in, width, height):
     return yuvImage
 
 
+def readYUVmulti(file_in, width, height, frames):
+    N = width * height
+    N_UV = (width // UV_SCALE) * (height // UV_SCALE)
+
+    filename, extension = file_in.split(".")
+    if extension != "yuv":
+        print(f"readYUVmulti: expected .yuv extension, found .{extension}")
+        exit()
+
+    with open(file_in, "rb") as infile:
+        yuvImage = YUVImage(width, height)
+        for f in range(frames):
+            yuvImage.Y = np.array(list(infile.read(N)), dtype=np.uint8)
+            yuvImage.U = np.array(list(infile.read(N_UV)), dtype=np.uint8)
+            yuvImage.V = np.array(list(infile.read(N_UV)), dtype=np.uint8)
+            if yuvImage.Y.size != N or yuvImage.U.size != N_UV or yuvImage.V.size != N_UV:
+                print(f"readYUVmulti: reach eos at frame {f}, expected {frames} frames")
+                exit()
+
+            rgbImage = yuv2rgb(yuvImage)
+
+            image = Image.fromarray(rgbImage, mode="RGB")
+            image.save(f"{filename}_f{f}.png")
+
+
 def yuv2rgb(yuvImage: YUVImage):
     w = yuvImage.width
     w_uv = w // UV_SCALE
@@ -156,7 +181,7 @@ def testConv():
 
 
 def convert_forman():
-    yuvImage = readYUV("foreman.yuv", 352, 288)
-    rgbImage = yuv2rgb(yuvImage)
-    image = Image.fromarray(rgbImage, mode="RGB")
-    image.save("foreman.png")
+    readYUVmulti("foreman.yuv", 352, 288, 10)
+
+
+convert_forman()
