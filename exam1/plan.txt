@@ -1,9 +1,9 @@
-1. read and understand code
-2. clean up code and restructure things
-3. create a program to convert to and from .yuv files | ✓
-4. create a test program to test encoding and decoding
-5. test rewritten code
-6. profile rewritten code
-7. improve performance of functions, starting from the slowest function
+1. Read and understand code
+2. Profile origional code | ✓
+3. Clean up code and restructure things
+4. Create a program to convert to and from .yuv files for fun | ✓
+5. Create a test program to test encoding | ✓
+6. Test and profile rewritten code
+7. Improve performance of functions, starting from the slowest function
 8. ???
 9. profit
