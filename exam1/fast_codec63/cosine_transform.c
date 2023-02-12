@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "dsp.h"
+#include "cosine_transform.h"
 #include "tables.h"
 
 static void transpose_block(float *in_data, float *out_data)

@@ -1,5 +1,4 @@
-#ifndef C63_C63_H_
-#define C63_C63_H_
+#pragma once
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -111,5 +110,3 @@ struct c63_common
 
   struct entropy_ctx e_ctx;
 };
-
-#endif  /* C63_C63_H_ */

@@ -1,5 +1,4 @@
-#ifndef C63_IO_H_
-#define C63_IO_H_
+#pragma once
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -20,5 +19,3 @@ void put_bits(struct entropy_ctx *c, uint16_t bits, uint8_t n);
 void put_byte(FILE *fp, int byte);
 
 void put_bytes(FILE *fp, const void* data, unsigned int len);
-
-#endif  /* C63_IO_H_ */

@@ -11,7 +11,7 @@
 #include "c63_write.h"
 #include "common.h"
 #include "io.h"
-#include "me.h"
+#include "motion_estimate.h"
 #include "tables.h"
 
 /* Decode VLC token */

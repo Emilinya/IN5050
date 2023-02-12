@@ -1,5 +1,4 @@
-#ifndef C63_COMMON_H_
-#define C63_COMMON_H_
+#pragma once
 
 #include <inttypes.h>
 
@@ -17,5 +16,3 @@ void dequantize_idct(int16_t *in_data, uint8_t *prediction, uint32_t width,
 void destroy_frame(struct frame *f);
 
 void dump_image(yuv_t *image, int w, int h, FILE *fp);
-
-#endif  /* C63_COMMON_H_ */
