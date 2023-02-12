@@ -4,10 +4,16 @@
 
 #include <inttypes.h>
 
-void dct_quant_block_8x8(int16_t *in_data, int16_t *out_data,
-    uint8_t *quant_tbl);
+void dct_quantize(
+    uint8_t *in_data, uint8_t *prediction, uint32_t width,
+    uint32_t height, int16_t *out_data, uint8_t *quantization);
 
-void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
-    uint8_t *quant_tbl);
+void dequantize_idct(
+    int16_t *in_data, uint8_t *prediction, uint32_t width,
+    uint32_t height, uint8_t *out_data, uint8_t *quantization);
+
+void dct_quant_block_8x8(int16_t *in_data, int16_t *out_data, uint8_t *quant_tbl);
+
+void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data, uint8_t *quant_tbl);
 
 void sad_block_8x8(uint8_t *block1, uint8_t *block2, int stride, int *result);

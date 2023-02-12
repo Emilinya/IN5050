@@ -7,12 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "c63.h"
-#include "c63_write.h"
-#include "common.h"
 #include "io.h"
-#include "motion_estimate.h"
+#include "c63.h"
+#include "utils.h"
 #include "tables.h"
+#include "c63_write.h"
+#include "motion_estimate.h"
 
 /* Decode VLC token */
 static uint8_t get_vlc_token(struct entropy_ctx *c, uint16_t *table,

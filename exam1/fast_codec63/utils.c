@@ -65,3 +65,71 @@ void free_yuv(yuv_t *image)
     free(image->V);
     free(image);
 }
+
+struct frame *create_frame(struct c63_common *cm, yuv_t *image)
+{
+    struct frame *f = malloc(sizeof(struct frame));
+
+    f->orig = image;
+
+    f->recons = malloc(sizeof(yuv_t));
+    f->recons->Y = malloc(cm->ypw * cm->yph);
+    f->recons->U = malloc(cm->upw * cm->uph);
+    f->recons->V = malloc(cm->vpw * cm->vph);
+
+    f->predicted = malloc(sizeof(yuv_t));
+    f->predicted->Y = calloc(cm->ypw * cm->yph, sizeof(uint8_t));
+    f->predicted->U = calloc(cm->upw * cm->uph, sizeof(uint8_t));
+    f->predicted->V = calloc(cm->vpw * cm->vph, sizeof(uint8_t));
+
+    f->residuals = malloc(sizeof(dct_t));
+    f->residuals->Ydct = calloc(cm->ypw * cm->yph, sizeof(int16_t));
+    f->residuals->Udct = calloc(cm->upw * cm->uph, sizeof(int16_t));
+    f->residuals->Vdct = calloc(cm->vpw * cm->vph, sizeof(int16_t));
+
+    f->mbs[Y_COMPONENT] =
+        calloc(cm->mb_rows * cm->mb_cols, sizeof(struct macroblock));
+    f->mbs[U_COMPONENT] =
+        calloc(cm->mb_rows / 2 * cm->mb_cols / 2, sizeof(struct macroblock));
+    f->mbs[V_COMPONENT] =
+        calloc(cm->mb_rows / 2 * cm->mb_cols / 2, sizeof(struct macroblock));
+
+    return f;
+}
+
+void destroy_frame(struct frame *f)
+{
+    /* First frame doesn't have a reconstructed frame to destroy */
+    if (!f)
+    {
+        return;
+    }
+
+    free(f->recons->Y);
+    free(f->recons->U);
+    free(f->recons->V);
+    free(f->recons);
+
+    free(f->residuals->Ydct);
+    free(f->residuals->Udct);
+    free(f->residuals->Vdct);
+    free(f->residuals);
+
+    free(f->predicted->Y);
+    free(f->predicted->U);
+    free(f->predicted->V);
+    free(f->predicted);
+
+    free(f->mbs[Y_COMPONENT]);
+    free(f->mbs[U_COMPONENT]);
+    free(f->mbs[V_COMPONENT]);
+
+    free(f);
+}
+
+void dump_image(yuv_t *image, int w, int h, FILE *fp)
+{
+    fwrite(image->Y, 1, w * h, fp);
+    fwrite(image->U, 1, w * h / 4, fp);
+    fwrite(image->V, 1, w * h / 4, fp);
+}

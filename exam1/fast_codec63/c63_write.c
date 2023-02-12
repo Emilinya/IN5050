@@ -7,10 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "c63.h"
-#include "c63_write.h"
 #include "io.h"
+#include "c63.h"
+#include "utils.h"
 #include "tables.h"
+#include "c63_write.h"
 
 int frequencies[2][12];
 

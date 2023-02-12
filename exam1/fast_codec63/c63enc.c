@@ -8,12 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "motion_estimate.h"
 #include "c63.h"
 #include "utils.h"
-#include "common.h"
 #include "tables.h"
 #include "c63_write.h"
+#include "motion_estimate.h"
 
 /* getopt */
 extern int optind;
@@ -123,7 +122,7 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   dequantize_idct(cm->curframe->residuals->Vdct, cm->curframe->predicted->V,
                   cm->vpw, cm->vph, cm->curframe->recons->V, cm->quanttbl[V_COMPONENT]);
 
-  /* Function dump_image(), found in common.c, can be used here to check if the
+  /* Function dump_image(), found in utils.c, can be used here to check if the
      prediction is correct */
 
   write_frame(cm);
