@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "c63.h"
 #include "utils.h"
@@ -62,8 +63,6 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   {
     cm->curframe->keyframe = 1;
     cm->frames_since_keyframe = 0;
-
-    fprintf(stderr, " (keyframe) ");
   }
   else
   {
@@ -113,50 +112,113 @@ int main(int argc, char **argv)
 {
   cl_args_t *args = get_cl_args(argc, argv);
 
-  FILE *outfile = errcheck_fopen(args->output_file, "wb");
-
-  struct c63_common *cm = init_c63_enc(args->width, args->height);
-  cm->e_ctx.fp = outfile;
-
+  if (args->run_count)
+  {
+    printf("Running encoder to %d times.\n", args->run_count);
+  }
   if (args->frame_limit)
   {
     printf("Limited to %d frames.\n", args->frame_limit);
   }
 
-  char *input_file = argv[optind];
-  FILE *infile = errcheck_fopen(input_file, "rb");
-
-  /* Encode input frames */
-  int numframes = 0;
-
-  while (1)
+  double *runtimes = calloc(args->run_count, sizeof(double));
+  int num_runs = 1;
+  if (args->run_count)
   {
-    yuv_t *image = read_yuv(infile, cm);
-    if (!image)
-    {
-      break;
-    }
-
-    printf("Encoding frame %d, ", numframes);
-    c63_encode_image(cm, image);
-
-    free_yuv(image);
-    printf("Done!\n");
-
-    ++numframes;
-
-    if (args->frame_limit && numframes >= args->frame_limit)
-    {
-      break;
-    }
+    num_runs = args->run_count;
   }
 
-  destroy_frame(cm->curframe);
-  free(cm);
-  free(args);
+  for (int i = 0; i < num_runs; i++)
+  {
+    FILE *outfile = errcheck_fopen(args->output_file, "wb");
 
-  fclose(outfile);
-  fclose(infile);
+    struct c63_common *cm = init_c63_enc(args->width, args->height);
+    cm->e_ctx.fp = outfile;
+
+    char *input_file = argv[optind];
+    FILE *infile = errcheck_fopen(input_file, "rb");
+
+    /* Encode input frames */
+    int numframes = 0;
+
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    while (1)
+    {
+      yuv_t *image = read_yuv(infile, cm);
+      if (!image)
+      {
+        break;
+      }
+
+      printf("\rEncoding frame %d", numframes);
+      fflush(stdout);
+      c63_encode_image(cm, image);
+
+      free_yuv(image);
+
+      ++numframes;
+
+      if (args->frame_limit && numframes >= args->frame_limit)
+      {
+        break;
+      }
+    }
+    printf("\n");
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+
+    if (args->run_count)
+    {
+      double time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+      runtimes[i] = time;
+    }
+
+    destroy_frame(cm->curframe);
+    free(cm);
+
+    fclose(outfile);
+    fclose(infile);
+  }
+
+  if (args->run_count)
+  {
+    double avg = 0;
+    double min = 1e6;
+    double max = 0;
+    for (size_t i = 0; i < args->run_count; i++)
+    {
+      avg += runtimes[i];
+      min = MIN(min, runtimes[i]);
+      max = MAX(max, runtimes[i]);
+    }
+    avg /= (double)args->run_count;
+
+    double std = 0;
+    for (size_t i = 0; i < args->run_count; i++)
+    {
+      double diff = runtimes[i] - avg;
+      std += diff * diff;
+    }
+    std = sqrt(std / (double)args->run_count);
+
+    FILE *perf_file = errcheck_fopen("encoder_runtimes.txt", "w");
+    fprintf(
+        perf_file, "Runtime data from %d runs. Each run encoded %d frames of a %dx%d video.\n",
+        args->run_count, args->frame_limit, args->width, args->height);
+    fprintf(perf_file, "avg ± std | min | max\n");
+    fprintf(perf_file, "%f ± %f | %f | %f\n", avg, std, min, max);
+    fprintf(perf_file, "\nData:\n");
+    for (size_t i = 0; i < args->run_count - 1; i++)
+    {
+      fprintf(perf_file, "%f ", runtimes[i]);
+    }
+    fprintf(perf_file, "%f\n", runtimes[args->run_count - 1]);
+    fclose(perf_file);
+
+    free(runtimes);
+  }
+
+  free(args);
 
   return EXIT_SUCCESS;
 }

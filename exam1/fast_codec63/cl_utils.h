@@ -9,6 +9,7 @@ struct cl_args
 {
     uint32_t width;
     uint32_t height;
+    uint32_t run_count;
     int frame_limit;
     char *output_file;
 };

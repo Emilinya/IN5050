@@ -5,6 +5,7 @@
 #include "c63.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 FILE *errcheck_fopen(const char *filename, const char *mode);

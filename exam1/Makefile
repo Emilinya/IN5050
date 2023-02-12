@@ -22,14 +22,14 @@ test: test/fast_foreman.c63 test/reference_foreman.c63
 
 .PHONY: profile_reference
 profile_reference: reference_codec63/c63enc
-	reference_codec63/c63enc -w 352 -h 288 -f 300 -o profiled_reference_foreman.c63 foreman.yuv
+	reference_codec63/c63enc -w 352 -h 288 -f 100 -o profiled_reference_foreman.c63 foreman.yuv
 	gprof reference_codec63/c63enc gmon.out > profiling/reference_profile.txt; \
 	rm profiled_reference_foreman.c63
 	rm gmon.out
 
 .PHONY: profile_fast
 profile_fast: fast_codec63/c63enc
-	fast_codec63/c63enc -w 352 -h 288 -f 300 -o profiled_fast_foreman.c63 foreman.yuv
+	fast_codec63/c63enc -w 352 -h 288 -f 100 -o profiled_fast_foreman.c63 -p 10 foreman.yuv
 	gprof fast_codec63/c63enc gmon.out > profiling/fast_profile.txt; \
 	rm profiled_fast_foreman.c63
 	rm gmon.out
