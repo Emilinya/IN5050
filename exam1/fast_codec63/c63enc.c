@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <errno.h>
-#include <getopt.h>
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -11,25 +10,10 @@
 #include "c63.h"
 #include "utils.h"
 #include "tables.h"
+#include "cl_utils.h"
 #include "c63_write.h"
 #include "motion_estimate.h"
-
-/* getopt */
-extern int optind;
-extern char *optarg;
-
-static void print_help()
-{
-  printf("Usage: ./c63enc [options] input_file\n");
-  printf("Commandline options:\n");
-  printf("  -h                             Height of images to compress\n");
-  printf("  -w                             Width of images to compress\n");
-  printf("  -o                             Output file (.c63)\n");
-  printf("  [-f]                           Limit number of frames to encode\n");
-  printf("\n");
-
-  exit(EXIT_FAILURE);
-}
+#include "cosine_transform.h"
 
 struct c63_common *init_c63_enc(int width, int height)
 {
@@ -66,12 +50,6 @@ struct c63_common *init_c63_enc(int width, int height)
   return cm;
 }
 
-void free_c63_enc(struct c63_common *cm)
-{
-  destroy_frame(cm->curframe);
-  free(cm);
-}
-
 static void c63_encode_image(struct c63_common *cm, yuv_t *image)
 {
   /* Advance to next frame */
@@ -102,16 +80,16 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   }
 
   /* DCT and Quantization */
-  dct_quantize(image->Y, cm->curframe->predicted->Y, cm->padw[Y_COMPONENT],
-               cm->padh[Y_COMPONENT], cm->curframe->residuals->Ydct,
+  dct_quantize(image->Y, cm->curframe->predicted->Y, cm->ypw,
+               cm->yph, cm->curframe->residuals->Ydct,
                cm->quanttbl[Y_COMPONENT]);
 
   dct_quantize(image->U, cm->curframe->predicted->U, cm->padw[U_COMPONENT],
-               cm->padh[U_COMPONENT], cm->curframe->residuals->Udct,
+               cm->uph, cm->curframe->residuals->Udct,
                cm->quanttbl[U_COMPONENT]);
 
-  dct_quantize(image->V, cm->curframe->predicted->V, cm->padw[V_COMPONENT],
-               cm->padh[V_COMPONENT], cm->curframe->residuals->Vdct,
+  dct_quantize(image->V, cm->curframe->predicted->V, cm->vpw,
+               cm->vph, cm->curframe->residuals->Vdct,
                cm->quanttbl[V_COMPONENT]);
 
   /* Reconstruct frame for inter-prediction */
@@ -133,58 +111,16 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
 
 int main(int argc, char **argv)
 {
-  if (argc == 1)
-  {
-    print_help();
-  }
+  cl_args_t *args = get_cl_args(argc, argv);
 
-  int c;
-  static uint32_t width = 0;
-  static uint32_t height = 0;
-  static int frame_limit = 0;
-  static char *output_file = NULL;
-  while ((c = getopt(argc, argv, "h:w:o:f:i:")) != -1)
-  {
-    switch (c)
-    {
-    case 'h':
-      height = atoi(optarg);
-      break;
-    case 'w':
-      width = atoi(optarg);
-      break;
-    case 'o':
-      output_file = optarg;
-      break;
-    case 'f':
-      frame_limit = atoi(optarg);
-      break;
-    default:
-      print_help();
-      break;
-    }
-  }
+  FILE *outfile = errcheck_fopen(args->output_file, "wb");
 
-  if (!width || !height || !output_file)
-  {
-    fprintf(stderr, "Too few program options, see --help.\n");
-    exit(EXIT_FAILURE);
-  }
-
-  if (optind >= argc)
-  {
-    fprintf(stderr, "Error getting program options, try --help.\n");
-    exit(EXIT_FAILURE);
-  }
-
-  FILE *outfile = errcheck_fopen(output_file, "wb");
-
-  struct c63_common *cm = init_c63_enc(width, height);
+  struct c63_common *cm = init_c63_enc(args->width, args->height);
   cm->e_ctx.fp = outfile;
 
-  if (frame_limit)
+  if (args->frame_limit)
   {
-    printf("Limited to %d frames.\n", frame_limit);
+    printf("Limited to %d frames.\n", args->frame_limit);
   }
 
   char *input_file = argv[optind];
@@ -209,13 +145,16 @@ int main(int argc, char **argv)
 
     ++numframes;
 
-    if (frame_limit && numframes >= frame_limit)
+    if (args->frame_limit && numframes >= args->frame_limit)
     {
       break;
     }
   }
 
-  free_c63_enc(cm);
+  destroy_frame(cm->curframe);
+  free(cm);
+  free(args);
+
   fclose(outfile);
   fclose(infile);
 
