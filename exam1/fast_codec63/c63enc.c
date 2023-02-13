@@ -205,7 +205,7 @@ int main(int argc, char **argv)
     fprintf(
         perf_file, "Runtime data from %d runs. Each run encoded %d frames of a %dx%d video.\n",
         args->run_count, args->frame_limit, args->width, args->height);
-    fprintf(perf_file, "avg ± std | min | max\n");
+    fprintf(perf_file, "avg ± std [s] | min [s] | max [s]\n");
     fprintf(perf_file, "%f ± %f | %f | %f\n", avg, std, min, max);
     fprintf(perf_file, "\nData:\n");
     for (size_t i = 0; i < args->run_count - 1; i++)

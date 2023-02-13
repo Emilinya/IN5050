@@ -6,7 +6,7 @@ PREV_FRAMES=$(shell cat test/fc.txt)
 
 .PHONY: test
 test: test/fast_foreman.c63 test/reference_foreman.c63
-	@if [ $(PREV_FRAMES) -ne $(COMP_FRAMES) ]; then \
+	@if [ "$(PREV_FRAMES)" != "$(COMP_FRAMES)" ]; then \
 			echo "Frame count has changed, remaking files"; \
 			rm test/fast_foreman.c63 test/reference_foreman.c63; \
 			make test/fast_foreman.c63; \

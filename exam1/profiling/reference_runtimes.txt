@@ -1,0 +1,6 @@
+Runtime data from 10 runs. Each run encoded 100 frames of a 352x288 video.
+avg ± std [s] | min [s] | max [s]
+11.711 ± 0.090 | 11.584 | 11.896
+
+Data:
+11.742 11.896 11.748 11.768 11.778 11.645 11.584 11.675 11.680 11.592
