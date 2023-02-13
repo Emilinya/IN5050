@@ -1,7 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <arm_neon.h>
 
 #include "cosine_transform.h"
 #include "tables.h"
@@ -168,23 +167,6 @@ void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
   for (i = 0; i < 64; ++i)
   {
     out_data[i] = mb[i];
-  }
-}
-
-void sad_block_8x8(uint8_t *block1, uint8_t *block2, int stride, int *result)
-{
-  *result = 0;
-  for (int y = 0; y < 8; y += 2) {
-    uint8x8_t block1_1_v = vld1_u8(&block1[y * stride]);
-    uint8x8_t block1_2_v = vld1_u8(&block1[(y+1) * stride]);
-    uint8x16_t block1_v = vcombine_u8(block1_1_v, block1_2_v);
-
-    uint8x8_t block2_1_v = vld1_u8(&block2[y * stride]);
-    uint8x8_t block2_2_v = vld1_u8(&block2[(y+1) * stride]);
-    uint8x16_t block2_v = vcombine_u8(block2_1_v, block2_2_v);
-
-    uint8x16_t abdiff = vabdq_u8(block2_v, block1_v);
-    *result += vaddlvq_u8(abdiff);
   }
 }
 

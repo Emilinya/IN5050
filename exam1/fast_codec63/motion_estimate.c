@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arm_neon.h>
 
 #include "cosine_transform.h"
 #include "motion_estimate.h"
@@ -49,8 +50,23 @@ static void me_block_8x8(struct c63_common *cm, int mb_x, int mb_y,
   {
     for (x = left; x < right; ++x)
     {
-      int sad;
-      sad_block_8x8(orig + my*w+mx, ref + y*w+x, w, &sad);
+      uint8_t *block1 = orig + my*w + mx;
+      uint8_t *block2 = ref + y*w + x;
+
+      uint16x8_t sum_v = vdupq_n_u16(0);
+      for (int y = 0; y < 8; y += 2) {
+        uint8x8_t block1_1_v = vld1_u8(&block1[y * w]);
+        uint8x8_t block1_2_v = vld1_u8(&block1[(y+1) * w]);
+        uint8x16_t block1_v = vcombine_u8(block1_1_v, block1_2_v);
+
+        uint8x8_t block2_1_v = vld1_u8(&block2[y * w]);
+        uint8x8_t block2_2_v = vld1_u8(&block2[(y+1) * w]);
+        uint8x16_t block2_v = vcombine_u8(block2_1_v, block2_2_v);
+
+        uint8x16_t abdiff = vabdq_u8(block2_v, block1_v);
+        sum_v = vaddq_u16(sum_v, vpaddlq_u8(abdiff));
+      }
+      int sad = vaddvq_u16(sum_v);
 
       /* printf("(%4d,%4d) - %d\n", x, y, sad); */
 
