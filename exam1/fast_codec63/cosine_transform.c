@@ -173,88 +173,27 @@ void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
 
 void sad_block_8x8(uint8_t *block1, uint8_t *block2, int stride, int *result)
 {
-  // load block 1
+  uint16x8_t sum = vdupq_n_u16(0);
+  for (int y = 0; y < 8; y++) {
+    uint8x8_t block1_v = vld1_u8(&block1[y * stride]);
+    uint8x8_t block2_v = vld1_u8(&block2[y * stride]);
+    uint8x8_t abdiff = vabd_u8(block2_v, block1_v);
 
-  uint8x8_t block1_1_1 = vld1_u8(&block1[0]);
-  uint8x8_t block1_1_2 = vld1_u8(&block1[stride]);
-  uint8x16_t block1_1 = vcombine_u8(block1_1_1, block1_1_2);
+    sum = vaddw_u8(sum, abdiff);
+  }
 
-  uint8x8_t block1_2_1 = vld1_u8(&block1[2 * stride]);
-  uint8x8_t block1_2_2 = vld1_u8(&block1[3 * stride]);
-  uint8x16_t block1_2 = vcombine_u8(block1_2_1, block1_2_2);
+  // add sum to itself
 
-  uint8x8_t block1_3_1 = vld1_u8(&block1[4 * stride]);
-  uint8x8_t block1_3_2 = vld1_u8(&block1[5 * stride]);
-  uint8x16_t block1_3 = vcombine_u8(block1_3_1, block1_3_2);
+  uint16x4_t half_sum_1 = vget_low_u16(sum);
+  uint16x4_t half_sum_2 = vget_high_u16(sum);
+  uint16x4_t half_sum = vadd_u16(half_sum_1, half_sum_2);
 
-  uint8x8_t block1_4_1 = vld1_u8(&block1[6 * stride]);
-  uint8x8_t block1_4_2 = vld1_u8(&block1[7 * stride]);
-  uint8x16_t block1_4 = vcombine_u8(block1_4_1, block1_4_2);
-
-  // load block 2
-
-  uint8x8_t block2_1_1 = vld1_u8(&block2[0]);
-  uint8x8_t block2_1_2 = vld1_u8(&block2[stride]);
-  uint8x16_t block2_1 = vcombine_u8(block2_1_1, block2_1_2);
-
-  uint8x8_t block2_2_1 = vld1_u8(&block2[2 * stride]);
-  uint8x8_t block2_2_2 = vld1_u8(&block2[3 * stride]);
-  uint8x16_t block2_2 = vcombine_u8(block2_2_1, block2_2_2);
-
-  uint8x8_t block2_3_1 = vld1_u8(&block2[4 * stride]);
-  uint8x8_t block2_3_2 = vld1_u8(&block2[5 * stride]);
-  uint8x16_t block2_3 = vcombine_u8(block2_3_1, block2_3_2);
-
-  uint8x8_t block2_4_1 = vld1_u8(&block2[6 * stride]);
-  uint8x8_t block2_4_2 = vld1_u8(&block2[7 * stride]);
-  uint8x16_t block2_4 = vcombine_u8(block2_4_1, block2_4_2);
-
-  // calculate absolute difference
-
-  uint8x16_t abdiff_1 = vabdq_u8(block2_1, block1_1);
-  uint8x16_t abdiff_2 = vabdq_u8(block2_2, block1_2);
-  uint8x16_t abdiff_3 = vabdq_u8(block2_3, block1_3);
-  uint8x16_t abdiff_4 = vabdq_u8(block2_4, block1_4);
-
-  // first round -> 64 values to 32 values, use addl to get uint16 to avoid overflow
-
-  uint8x8_t abdiff_1_1 = vget_low_u8(abdiff_1);
-  uint8x8_t abdiff_1_2 = vget_high_u8(abdiff_1);
-  uint16x8_t absdiffsum_1_1 = vaddl_u8(abdiff_1_1, abdiff_1_2);
-
-  uint8x8_t abdiff_2_1 = vget_low_u8(abdiff_2);
-  uint8x8_t abdiff_2_2 = vget_high_u8(abdiff_2);
-  uint16x8_t absdiffsum_1_2 = vaddl_u8(abdiff_2_1, abdiff_2_2);
-
-  uint8x8_t abdiff_3_1 = vget_low_u8(abdiff_3);
-  uint8x8_t abdiff_3_2 = vget_high_u8(abdiff_3);
-  uint16x8_t absdiffsum_1_3 = vaddl_u8(abdiff_3_1, abdiff_3_2);
-
-  uint8x8_t abdiff_4_1 = vget_low_u8(abdiff_4);
-  uint8x8_t abdiff_4_2 = vget_high_u8(abdiff_4);
-  uint16x8_t absdiffsum_1_4 = vaddl_u8(abdiff_4_1, abdiff_4_2);
-
-  // second round -> 32 values to 16 values
-
-  uint16x8_t absdiffsum_2_1 = vaddq_u16(absdiffsum_1_1, absdiffsum_1_2);
-  uint16x8_t absdiffsum_2_2 = vaddq_u16(absdiffsum_1_3, absdiffsum_1_4);
-
-  // third round -> 16 values to 8 values
-
-  uint16x8_t absdiffsum_3 = vaddq_u16(absdiffsum_2_1, absdiffsum_2_2);
-
-  // fourth round -> 8 values to 4 values
-
-  uint16x4_t absdiffsum_3_1 = vget_low_u16(absdiffsum_3);
-  uint16x4_t absdiffsum_3_2 = vget_high_u16(absdiffsum_3);
-  uint16x4_t absdiffsum_4 = vadd_u16(absdiffsum_3_1, absdiffsum_3_2);
-
-  // finally add the remaining 4 values together
+  // add the 4 remaining values together
 
   uint16_t vals[4];
-  vst1_u16(vals, absdiffsum_4);
+  vst1_u16(vals, half_sum);
 
-  *result = vals[0] + vals[1] + vals[2] + vals[3];
+  *result = half_sum[0] + half_sum[1] + half_sum[2] + half_sum[3];
 }
 
 void dequantize_idct_row(int16_t *in_data, uint8_t *prediction, int w, int h,
