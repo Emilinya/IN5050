@@ -5,5 +5,12 @@
 5. Create a test program to test encoding | ✓
 6. Test and profile rewritten code | ✓
 7. Improve performance of functions, starting from the slowest function
+  - sad_block_8x8 takes up ~80 % of computing time, it is the top priority
+    * a sum of absolute differencec of two 8x8 blocks.
+      > 8x8 uin8 can fit in one uint8x16x4_t vector
+      > absolute difference intrinsic: vabdq_u8
+      > problem: there is no vabdq_u8_x4 intinsic, or similar for add
+      > sum: split vector in two and add parts together
+  - me_block_8x8 takes up ~13 % of computing time
 8. ???
 9. profit
