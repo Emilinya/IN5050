@@ -173,27 +173,19 @@ void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
 
 void sad_block_8x8(uint8_t *block1, uint8_t *block2, int stride, int *result)
 {
-  uint16x8_t sum = vdupq_n_u16(0);
-  for (int y = 0; y < 8; y++) {
-    uint8x8_t block1_v = vld1_u8(&block1[y * stride]);
-    uint8x8_t block2_v = vld1_u8(&block2[y * stride]);
-    uint8x8_t abdiff = vabd_u8(block2_v, block1_v);
+  *result = 0;
+  for (int y = 0; y < 8; y += 2) {
+    uint8x8_t block1_1_v = vld1_u8(&block1[y * stride]);
+    uint8x8_t block1_2_v = vld1_u8(&block1[(y+1) * stride]);
+    uint8x16_t block1_v = vcombine_u8(block1_1_v, block1_2_v);
 
-    sum = vaddw_u8(sum, abdiff);
+    uint8x8_t block2_1_v = vld1_u8(&block2[y * stride]);
+    uint8x8_t block2_2_v = vld1_u8(&block2[(y+1) * stride]);
+    uint8x16_t block2_v = vcombine_u8(block2_1_v, block2_2_v);
+
+    uint8x16_t abdiff = vabdq_u8(block2_v, block1_v);
+    *result += vaddlvq_u8(abdiff);
   }
-
-  // add sum to itself
-
-  uint16x4_t half_sum_1 = vget_low_u16(sum);
-  uint16x4_t half_sum_2 = vget_high_u16(sum);
-  uint16x4_t half_sum = vadd_u16(half_sum_1, half_sum_2);
-
-  // add the 4 remaining values together
-
-  uint16_t vals[4];
-  vst1_u16(vals, half_sum);
-
-  *result = half_sum[0] + half_sum[1] + half_sum[2] + half_sum[3];
 }
 
 void dequantize_idct_row(int16_t *in_data, uint8_t *prediction, int w, int h,
