@@ -6,7 +6,7 @@
 #include "cosine_transform.h"
 #include "tables.h"
 
-#include <stdio.h>
+#include <stdio.h> 
 
 static void transpose_block(float *in_data, float *out_data)
 {
@@ -43,19 +43,35 @@ __attribute__((always_inline)) static void dct_1d(float *in_data, float *out_dat
 
 __attribute__((always_inline)) static void idct_1d(float *in_data, float *out_data)
 {
-  float32x4_t in_data_1_v = vld1q_f32(in_data);
-  float32x4_t in_data_2_v = vld1q_f32(&in_data[4]);
+  if (FAST_IDCT) {
+    float32x4_t in_data_1_v = vld1q_f32(in_data);
+    float32x4_t in_data_2_v = vld1q_f32(&in_data[4]);
 
-  for (int i = 0; i < 8; ++i)
-  {
-    float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
-    float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
+    for (int i = 0; i < 8; ++i)
+    {
+      float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
+      float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
 
-    float32x4_t dct_1_v = vmulq_f32(in_data_1_v, dctlookup_1_v);
-    float32x4_t dct_2_v = vmulq_f32(in_data_2_v, dctlookup_2_v);
-    float32x4_t dct_v = vaddq_f32(dct_1_v, dct_2_v);
+      float32x4_t dct_1_v = vmulq_f32(in_data_1_v, dctlookup_1_v);
+      float32x4_t dct_2_v = vmulq_f32(in_data_2_v, dctlookup_2_v);
+      float32x4_t dct_v = vaddq_f32(dct_1_v, dct_2_v);
 
-    out_data[i] = vaddvq_f32(dct_v);
+      out_data[i] = vaddvq_f32(dct_v);
+    }
+  } else {
+    int i, j;
+
+    for (i = 0; i < 8; ++i)
+    {
+      float idct = 0;
+
+      for (j = 0; j < 8; ++j)
+      {
+        idct += in_data[j] * dctlookup[i][j];
+      }
+
+      out_data[i] = idct;
+    }
   }
 }
 
