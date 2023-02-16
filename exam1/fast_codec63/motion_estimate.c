@@ -11,64 +11,63 @@
 
 #include "cosine_transform.h"
 #include "motion_estimate.h"
+#include "utils.h"
 
 /* Motion estimation for 8x8 block */
-static void me_block_8x8(struct c63_common *cm, int mb_x, int mb_y,
+static void me_block_8x8(
+    struct c63_common *cm, int mb_x, int mb_y,
     uint8_t *orig, uint8_t *ref, int color_component)
 {
   struct macroblock *mb =
-    &cm->curframe->mbs[color_component][mb_y*cm->padw[color_component]/8+mb_x];
+      &cm->curframe->mbs[color_component][mb_y * cm->padw[color_component] / 8 + mb_x];
 
   int range = cm->me_search_range;
 
   /* Quarter resolution for chroma channels. */
-  if (color_component > 0) { range /= 2; }
-
-  int left = mb_x * 8 - range;
-  int top = mb_y * 8 - range;
-  int right = mb_x * 8 + range;
-  int bottom = mb_y * 8 + range;
+  if (color_component > 0)
+  {
+    range /= 2;
+  }
 
   int w = cm->padw[color_component];
   int h = cm->padh[color_component];
 
   /* Make sure we are within bounds of reference frame. TODO: Support partial
      frame bounds. */
-  if (left < 0) { left = 0; }
-  if (top < 0) { top = 0; }
-  if (right > (w - 8)) { right = w - 8; }
-  if (bottom > (h - 8)) { bottom = h - 8; }
+  int left = MAX(mb_x * 8 - range, 0);
+  int top = MAX(mb_y * 8 - range, 0);
+  int right = MIN(mb_x * 8 + range, w - 8);
+  int bottom = MIN(mb_y * 8 + range, h - 8);
 
-  int x, y;
+  int x, y, v;
 
   int mx = mb_x * 8;
   int my = mb_y * 8;
 
   int best_sad = INT_MAX;
 
+  uint8_t *block1 = orig + my * w + mx;
   for (y = top; y < bottom; ++y)
   {
     for (x = left; x < right; ++x)
     {
-      uint8_t *block1 = orig + my*w + mx;
-      uint8_t *block2 = ref + y*w + x;
+      uint8_t *block2 = ref + y * w + x;
 
       uint16x8_t sum_v = vdupq_n_u16(0);
-      for (int y = 0; y < 8; y += 2) {
-        uint8x8_t block1_1_v = vld1_u8(&block1[y * w]);
-        uint8x8_t block1_2_v = vld1_u8(&block1[(y+1) * w]);
+      for (v = 0; v < 8; v += 2)
+      {
+        uint8x8_t block1_1_v = vld1_u8(&block1[v * w]);
+        uint8x8_t block1_2_v = vld1_u8(&block1[(v + 1) * w]);
         uint8x16_t block1_v = vcombine_u8(block1_1_v, block1_2_v);
 
-        uint8x8_t block2_1_v = vld1_u8(&block2[y * w]);
-        uint8x8_t block2_2_v = vld1_u8(&block2[(y+1) * w]);
+        uint8x8_t block2_1_v = vld1_u8(&block2[v * w]);
+        uint8x8_t block2_2_v = vld1_u8(&block2[(v + 1) * w]);
         uint8x16_t block2_v = vcombine_u8(block2_1_v, block2_2_v);
 
         uint8x16_t abdiff = vabdq_u8(block2_v, block1_v);
         sum_v = vaddq_u16(sum_v, vpaddlq_u8(abdiff));
       }
       int sad = vaddvq_u16(sum_v);
-
-      /* printf("(%4d,%4d) - %d\n", x, y, sad); */
 
       if (sad < best_sad)
       {
@@ -99,7 +98,7 @@ void c63_motion_estimate(struct c63_common *cm)
     for (mb_x = 0; mb_x < cm->mb_cols; ++mb_x)
     {
       me_block_8x8(cm, mb_x, mb_y, cm->curframe->orig->Y,
-          cm->refframe->recons->Y, Y_COMPONENT);
+                   cm->refframe->recons->Y, Y_COMPONENT);
     }
   }
 
@@ -109,21 +108,24 @@ void c63_motion_estimate(struct c63_common *cm)
     for (mb_x = 0; mb_x < cm->mb_cols / 2; ++mb_x)
     {
       me_block_8x8(cm, mb_x, mb_y, cm->curframe->orig->U,
-          cm->refframe->recons->U, U_COMPONENT);
+                   cm->refframe->recons->U, U_COMPONENT);
       me_block_8x8(cm, mb_x, mb_y, cm->curframe->orig->V,
-          cm->refframe->recons->V, V_COMPONENT);
+                   cm->refframe->recons->V, V_COMPONENT);
     }
   }
 }
 
 /* Motion compensation for 8x8 block */
 static void mc_block_8x8(struct c63_common *cm, int mb_x, int mb_y,
-    uint8_t *predicted, uint8_t *ref, int color_component)
+                         uint8_t *predicted, uint8_t *ref, int color_component)
 {
   struct macroblock *mb =
-    &cm->curframe->mbs[color_component][mb_y*cm->padw[color_component]/8+mb_x];
+      &cm->curframe->mbs[color_component][mb_y * cm->padw[color_component] / 8 + mb_x];
 
-  if (!mb->use_mv) { return; }
+  if (!mb->use_mv)
+  {
+    return;
+  }
 
   int left = mb_x * 8;
   int top = mb_y * 8;
@@ -139,7 +141,7 @@ static void mc_block_8x8(struct c63_common *cm, int mb_x, int mb_y,
   {
     for (x = left; x < right; ++x)
     {
-      predicted[y*w+x] = ref[(y + mb->mv_y) * w + (x + mb->mv_x)];
+      predicted[y * w + x] = ref[(y + mb->mv_y) * w + (x + mb->mv_x)];
     }
   }
 }
@@ -154,7 +156,7 @@ void c63_motion_compensate(struct c63_common *cm)
     for (mb_x = 0; mb_x < cm->mb_cols; ++mb_x)
     {
       mc_block_8x8(cm, mb_x, mb_y, cm->curframe->predicted->Y,
-          cm->refframe->recons->Y, Y_COMPONENT);
+                   cm->refframe->recons->Y, Y_COMPONENT);
     }
   }
 
@@ -164,9 +166,9 @@ void c63_motion_compensate(struct c63_common *cm)
     for (mb_x = 0; mb_x < cm->mb_cols / 2; ++mb_x)
     {
       mc_block_8x8(cm, mb_x, mb_y, cm->curframe->predicted->U,
-          cm->refframe->recons->U, U_COMPONENT);
+                   cm->refframe->recons->U, U_COMPONENT);
       mc_block_8x8(cm, mb_x, mb_y, cm->curframe->predicted->V,
-          cm->refframe->recons->V, V_COMPONENT);
+                   cm->refframe->recons->V, V_COMPONENT);
     }
   }
 }
