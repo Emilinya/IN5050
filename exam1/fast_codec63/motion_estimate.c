@@ -54,18 +54,13 @@ static void me_block_8x8(
       uint8_t *block2 = ref + y * w + x;
 
       uint16x8_t sum_v = vdupq_n_u16(0);
-      for (v = 0; v < 8; v += 2)
+      for (v = 0; v < 8; ++v)
       {
-        uint8x8_t block1_1_v = vld1_u8(&block1[v * w]);
-        uint8x8_t block1_2_v = vld1_u8(&block1[(v + 1) * w]);
-        uint8x16_t block1_v = vcombine_u8(block1_1_v, block1_2_v);
+        uint8x8_t block1_v = vld1_u8(&block1[v * w]);
+        uint8x8_t block2_v = vld1_u8(&block2[v * w]);
 
-        uint8x8_t block2_1_v = vld1_u8(&block2[v * w]);
-        uint8x8_t block2_2_v = vld1_u8(&block2[(v + 1) * w]);
-        uint8x16_t block2_v = vcombine_u8(block2_1_v, block2_2_v);
-
-        uint8x16_t abdiff = vabdq_u8(block2_v, block1_v);
-        sum_v = vaddq_u16(sum_v, vpaddlq_u8(abdiff));
+        uint8x8_t abdiff = vabd_u8(block1_v, block2_v);
+        sum_v = vaddw_u8(sum_v, abdiff);
       }
       int sad = vaddvq_u16(sum_v);
 
