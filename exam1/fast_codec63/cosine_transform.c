@@ -1,9 +1,12 @@
 #include <math.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <arm_neon.h>
 
 #include "cosine_transform.h"
 #include "tables.h"
+
+#include <stdio.h>
 
 static void transpose_block(float *in_data, float *out_data)
 {
@@ -18,37 +21,41 @@ static void transpose_block(float *in_data, float *out_data)
   }
 }
 
-static void dct_1d(float *in_data, float *out_data)
+__attribute__((always_inline)) static void dct_1d(float *in_data, float *out_data)
 {
-  int i, j;
+  float32x4_t out_data_1_v = vdupq_n_f32(0.);
+  float32x4_t out_data_2_v = vdupq_n_f32(0.);
 
-  for (i = 0; i < 8; ++i)
+  for (int i = 0; i < 8; ++i)
   {
-    float dct = 0;
+    float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
+    float32x4_t row_prod_1 = vmulq_n_f32(dctlookup_1_v, in_data[i]);
+    out_data_1_v = vaddq_f32(out_data_1_v, row_prod_1);
 
-    for (j = 0; j < 8; ++j)
-    {
-      dct += in_data[j] * dctlookup[j][i];
-    }
-
-    out_data[i] = dct;
+    float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
+    float32x4_t row_prod_2 = vmulq_n_f32(dctlookup_2_v, in_data[i]);
+    out_data_2_v = vaddq_f32(out_data_2_v, row_prod_2);
   }
+
+  vst1q_f32(out_data, out_data_1_v);
+  vst1q_f32(&out_data[4], out_data_2_v);
 }
 
-static void idct_1d(float *in_data, float *out_data)
+__attribute__((always_inline)) static void idct_1d(float *in_data, float *out_data)
 {
-  int i, j;
+  float32x4_t in_data_1_v = vld1q_f32(in_data);
+  float32x4_t in_data_2_v = vld1q_f32(&in_data[4]);
 
-  for (i = 0; i < 8; ++i)
+  for (int i = 0; i < 8; ++i)
   {
-    float idct = 0;
+    float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
+    float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
 
-    for (j = 0; j < 8; ++j)
-    {
-      idct += in_data[j] * dctlookup[i][j];
-    }
+    float32x4_t dct_1_v = vmulq_f32(in_data_1_v, dctlookup_1_v);
+    float32x4_t dct_2_v = vmulq_f32(in_data_2_v, dctlookup_2_v);
+    float32x4_t dct_v = vaddq_f32(dct_1_v, dct_2_v);
 
-    out_data[i] = idct;
+    out_data[i] = vaddvq_f32(dct_v);
   }
 }
 
