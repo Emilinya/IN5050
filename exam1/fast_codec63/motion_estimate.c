@@ -53,15 +53,21 @@ static void me_block_8x8(
     {
       uint8_t *block2 = ref + y * w + x;
 
+      // initialize a vector of 8 16-bit unsigned ints, all with the value 0
       uint16x8_t sum_v = vdupq_n_u16(0);
       for (v = 0; v < 8; ++v)
       {
+        // load 8 values from block1 and block2 in vectors
         uint8x8_t block1_v = vld1_u8(&block1[v * w]);
         uint8x8_t block2_v = vld1_u8(&block2[v * w]);
 
+        // calculate absolute difference of all the values in one instruction
         uint8x8_t abdiff = vabd_u8(block1_v, block2_v);
+
+        // add the absolute differences to the sum vector in a widening add
         sum_v = vaddw_u8(sum_v, abdiff);
       }
+      // add the 8 values in the sum vector together to get the total sum
       int sad = vaddvq_u16(sum_v);
 
       if (sad < best_sad)

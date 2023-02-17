@@ -23,39 +23,60 @@ static void transpose_block(float *in_data, float *out_data)
 
 __attribute__((always_inline)) static void dct_1d(float *in_data, float *out_data)
 {
+  // define two vectors with 4 32-bit floats each,
+  // one for the first hald of the output, the other for the other half
   float32x4_t out_data_1_v = vdupq_n_f32(0.);
   float32x4_t out_data_2_v = vdupq_n_f32(0.);
 
   for (int i = 0; i < 8; ++i)
   {
+    // load the first four values of row i of the lookup table into a vector
     float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
+
+    // multiply each value in the vector with the scalar in_data[i]
     float32x4_t row_prod_1 = vmulq_n_f32(dctlookup_1_v, in_data[i]);
+
+    // add the row product vector to the out data accumelator
     out_data_1_v = vaddq_f32(out_data_1_v, row_prod_1);
 
+    // do the same steps as above, but with the second half of the lookup table row
     float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
     float32x4_t row_prod_2 = vmulq_n_f32(dctlookup_2_v, in_data[i]);
     out_data_2_v = vaddq_f32(out_data_2_v, row_prod_2);
   }
 
+  // store the out data vectors in the out data array
   vst1q_f32(out_data, out_data_1_v);
   vst1q_f32(&out_data[4], out_data_2_v);
 }
 
 __attribute__((always_inline)) static void idct_1d(float *in_data, float *out_data)
 {
+  // The vectorized version of this function changes the order of operation a bit,
+  // which introduces some floating point errors. This mean that the output is not
+  // exactly same, which breaks my test function. To be able to use the test function,
+  // I added the ability to turn off the vectorization when testing.
+
   if (FAST_IDCT) {
+    // load the input data in two vectors, the first containing the first four values,
+    // the second containing the remaining four values
     float32x4_t in_data_1_v = vld1q_f32(in_data);
     float32x4_t in_data_2_v = vld1q_f32(&in_data[4]);
 
     for (int i = 0; i < 8; ++i)
     {
+      // load row i of the lookup table in two vectors containing four values each
       float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
       float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
 
+      // multiply the vectors together
       float32x4_t dct_1_v = vmulq_f32(in_data_1_v, dctlookup_1_v);
       float32x4_t dct_2_v = vmulq_f32(in_data_2_v, dctlookup_2_v);
+
+      // add the two product vectors together
       float32x4_t dct_v = vaddq_f32(dct_1_v, dct_2_v);
 
+      // add the remaining four values together to get the output data
       out_data[i] = vaddvq_f32(dct_v);
     }
   } else {
