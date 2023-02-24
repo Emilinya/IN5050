@@ -19,6 +19,7 @@ test: test/fast_foreman.c63 test/reference_foreman.c63
     else \
             echo "\033[0;31mYou have broken the decoder!\033[0m"; \
     fi
+	@rm test/fast_foreman.c63 test/reference_foreman.c63;
 
 .PHONY: profile_reference
 profile_reference: reference_codec63/c63enc
