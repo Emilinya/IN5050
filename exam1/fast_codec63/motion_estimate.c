@@ -33,9 +33,9 @@ __attribute__((always_inline)) void sad_block_8x8(uint8_t *block1, uint8_t *bloc
 }
 
 /* Motion estimation for 8x8 block */
-static void me_block_8x8(
-  struct c63_common *cm, int mb_x, int mb_y,
-  uint8_t *orig, uint8_t *ref, int color_component)
+__attribute__((always_inline)) static void me_block_8x8(
+    struct c63_common *cm, int mb_x, int mb_y,
+    uint8_t *orig, uint8_t *ref, int color_component)
 {
   struct macroblock *mb =
       &cm->curframe->mbs[color_component][mb_y * cm->padw[color_component] / 8 + mb_x];

@@ -1,7 +1,6 @@
 #pragma once
 
 #define ISQRT2 0.70710678118654f
-#define FAST_IDCT 1
 
 #include <inttypes.h>
 
