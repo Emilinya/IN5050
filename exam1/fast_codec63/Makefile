@@ -1,7 +1,7 @@
 # Acknowledgement: Functionality for creating make rules of dependencies is
 # based on code presented here <http://codereview.stackexchange.com/q/11109>
 
-CFLAGS = -O1 -fno-tree-vectorize -Wall -Wextra -g -pg -march=armv8.2-a
+CFLAGS = -O1 -fno-tree-vectorize -Wall -Wextra -g -march=armv8.2-a
 LDFLAGS = -lm
 # Use the compiler to generate make rules
 MFLAGS = -MMD -MP -MF

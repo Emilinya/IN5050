@@ -1,0 +1,9 @@
+Encoding the full 300 frames of foreman.yuv
+
+reference:
+    27.454 s
+improved:
+    6.575 s
+
+Speedup:
+    4.18 x
