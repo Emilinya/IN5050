@@ -114,11 +114,11 @@ int main(int argc, char **argv)
 
   if (args->run_count)
   {
-    printf("Running encoder to %d times.\n", args->run_count);
+    printf("Running encoder %d times.\n", args->run_count);
   }
   if (args->frame_limit)
   {
-    printf("Limited to %d frames.\n", args->frame_limit);
+    printf("Encoder limited to %d frames.\n", args->frame_limit);
   }
 
   double *runtimes = calloc(args->run_count, sizeof(double));
