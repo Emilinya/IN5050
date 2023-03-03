@@ -181,7 +181,7 @@ def testConv():
 
 
 def convert_forman():
-    readYUVmulti("foreman.yuv", 352, 288, 10)
+    readYUVmulti("test/fast_foreman.yuv", 352, 288, 10)
 
 
 convert_forman()

@@ -6,13 +6,6 @@ PREV_FRAMES=$(shell cat test/fc.txt)
 
 .PHONY: test
 test: test/fast_foreman.c63 test/reference_foreman.c63
-	@if [ "$(PREV_FRAMES)" != "$(COMP_FRAMES)" ]; then \
-			echo "Frame count has changed, remaking files"; \
-			rm test/fast_foreman.c63 test/reference_foreman.c63; \
-			make test/fast_foreman.c63; \
-			make test/reference_foreman.c63; \
-			echo $(COMP_FRAMES) > test/fc.txt; \
-    fi
 	@diff test/fast_foreman.c63 test/reference_foreman.c63; \
 	if [ $$? -eq 0 ]; then \
             echo "\033[0;32mFast decoder still works\033[0m"; \

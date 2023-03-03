@@ -3,36 +3,35 @@ Flat profile:
 Each sample counts as 0.01 seconds.
   %   cumulative   self              self     total           
  time   seconds   seconds    calls  ms/call  ms/call  name    
- 70.52     18.89    18.89  2352240     0.01     0.01  me_block_8x8
-  8.48     21.16     2.27 38016000     0.00     0.00  idct_1d
-  7.97     23.30     2.14  2376000     0.00     0.00  dct_quant_block_8x8
-  3.25     24.17     0.87 50426090     0.00     0.00  put_bits
-  2.48     24.84     0.67 38016000     0.00     0.00  dct_1d
-  2.19     25.42     0.59  2376000     0.00     0.00  dequant_idct_block_8x8
-  1.59     25.85     0.43  9504000     0.00     0.00  transpose_block
-  1.16     26.16     0.31  1188000     0.00     0.00  write_interleaved_data_MCU
-  0.69     26.34     0.19  2352240     0.00     0.00  mc_block_8x8
-  0.52     26.48     0.14    72000     0.00     0.04  dequantize_idct_row
-  0.45     26.60     0.12    72000     0.00     0.04  dct_quantize_row
-  0.19     26.65     0.05  4752000     0.00     0.00  scale_block
-  0.15     26.69     0.04      990     0.04     0.23  c63_motion_compensate
-  0.11     26.72     0.03      990     0.03    19.11  c63_motion_estimate
-  0.11     26.75     0.03                             read_bytes
-  0.09     26.78     0.03                             main
-  0.07     26.80     0.02 14427920     0.00     0.00  put_byte
-  0.04     26.81     0.01     1000     0.01     1.21  write_frame
-  0.00     26.81     0.00    11000     0.00     0.00  put_bytes
-  0.00     26.81     0.00     4000     0.00     0.00  write_DHT_HTS
-  0.00     26.81     0.00     3000     0.00     1.05  dct_quantize
-  0.00     26.81     0.00     3000     0.00     1.08  dequantize_idct
-  0.00     26.81     0.00     1010     0.00     0.00  destroy_frame
-  0.00     26.81     0.00     1000     0.00     0.00  create_frame
-  0.00     26.81     0.00     1000     0.00     0.00  flush_bits
-  0.00     26.81     0.00     1000     0.00     0.00  free_yuv
-  0.00     26.81     0.00     1000     0.00     0.00  read_yuv
-  0.00     26.81     0.00       21     0.00     0.00  errcheck_fopen
-  0.00     26.81     0.00       10     0.00     0.00  init_c63_enc
-  0.00     26.81     0.00        1     0.00     0.00  get_cl_args
+ 82.82     44.80    44.80  2352240     0.02     0.02  me_block_8x8
+  4.03     46.98     2.18 38016000     0.00     0.00  idct_1d
+  2.98     48.59     1.61 1667381760     0.00     0.00  sad_block_8x8
+  2.26     49.81     1.22 38016000     0.00     0.00  dct_1d
+  1.50     50.62     0.81  1188000     0.00     0.00  write_interleaved_data_MCU
+  1.18     51.26     0.64  4752000     0.00     0.00  scale_block
+  1.00     51.80     0.54  9504000     0.00     0.00  transpose_block
+  0.94     52.31     0.51  2376000     0.00     0.00  dequant_idct_block_8x8
+  0.89     52.79     0.48 50426090     0.00     0.00  put_bits
+  0.78     53.21     0.42  2376000     0.00     0.00  dct_quant_block_8x8
+  0.59     53.53     0.32    72000     0.00     0.04  dct_quantize_row
+  0.41     53.75     0.22  2352240     0.00     0.00  mc_block_8x8
+  0.41     53.97     0.22    72000     0.00     0.05  dequantize_idct_row
+  0.07     54.01     0.04      990     0.04    46.92  c63_motion_estimate
+  0.06     54.04     0.03 14427920     0.00     0.00  put_byte
+  0.06     54.07     0.03      990     0.03     0.25  c63_motion_compensate
+  0.02     54.08     0.01     4000     0.00     0.00  write_DHT_HTS
+  0.02     54.09     0.01     1000     0.01     1.34  write_frame
+  0.00     54.09     0.00    11000     0.00     0.00  put_bytes
+  0.00     54.09     0.00     3000     0.00     0.85  dct_quantize
+  0.00     54.09     0.00     3000     0.00     1.17  dequantize_idct
+  0.00     54.09     0.00     1010     0.00     0.00  destroy_frame
+  0.00     54.09     0.00     1000     0.00     0.00  create_frame
+  0.00     54.09     0.00     1000     0.00     0.00  flush_bits
+  0.00     54.09     0.00     1000     0.00     0.00  free_yuv
+  0.00     54.09     0.00     1000     0.00     0.00  read_yuv
+  0.00     54.09     0.00       21     0.00     0.00  errcheck_fopen
+  0.00     54.09     0.00       10     0.00     0.00  init_c63_enc
+  0.00     54.09     0.00        1     0.00     0.00  get_cl_args
 
  %         the percentage of the total running time of the
 time       program used by this function.
@@ -70,16 +69,16 @@ notice and this notice are preserved.
 		     Call graph (explanation follows)
 
 
-granularity: each sample hit covers 2 byte(s) for 0.04% of 26.81 seconds
+granularity: each sample hit covers 4 byte(s) for 0.02% of 54.09 seconds
 
 index % time    self  children    called     name
                                                  <spontaneous>
-[1]     99.9    0.03   26.75                 main [1]
-                0.03   18.89     990/990         c63_motion_estimate [2]
-                0.00    3.23    3000/3000        dequantize_idct [5]
-                0.00    3.16    3000/3000        dct_quantize [7]
-                0.01    1.20    1000/1000        write_frame [11]
-                0.04    0.19     990/990         c63_motion_compensate [16]
+[1]    100.0    0.00   54.09                 main [1]
+                0.04   46.41     990/990         c63_motion_estimate [2]
+                0.00    3.50    3000/3000        dequantize_idct [5]
+                0.00    2.55    3000/3000        dct_quantize [8]
+                0.01    1.33    1000/1000        write_frame [12]
+                0.03    0.22     990/990         c63_motion_compensate [18]
                 0.00    0.00    1010/1010        destroy_frame [24]
                 0.00    0.00    1000/1000        free_yuv [26]
                 0.00    0.00    1000/1000        read_yuv [27]
@@ -88,97 +87,98 @@ index % time    self  children    called     name
                 0.00    0.00      10/10          init_c63_enc [29]
                 0.00    0.00       1/1           get_cl_args [30]
 -----------------------------------------------
-                0.03   18.89     990/990         main [1]
-[2]     70.6    0.03   18.89     990         c63_motion_estimate [2]
-               18.89    0.00 2352240/2352240     me_block_8x8 [3]
+                0.04   46.41     990/990         main [1]
+[2]     85.9    0.04   46.41     990         c63_motion_estimate [2]
+               44.80    1.61 2352240/2352240     me_block_8x8 [3]
 -----------------------------------------------
-               18.89    0.00 2352240/2352240     c63_motion_estimate [2]
-[3]     70.5   18.89    0.00 2352240         me_block_8x8 [3]
+               44.80    1.61 2352240/2352240     c63_motion_estimate [2]
+[3]     85.8   44.80    1.61 2352240         me_block_8x8 [3]
+                1.61    0.00 1667381760/1667381760     sad_block_8x8 [11]
 -----------------------------------------------
-                0.14    3.09   72000/72000       dequantize_idct [5]
-[4]     12.1    0.14    3.09   72000         dequantize_idct_row [4]
-                0.59    2.51 2376000/2376000     dequant_idct_block_8x8 [8]
+                0.22    3.28   72000/72000       dequantize_idct [5]
+[4]      6.5    0.22    3.28   72000         dequantize_idct_row [4]
+                0.51    2.77 2376000/2376000     dequant_idct_block_8x8 [6]
 -----------------------------------------------
-                0.00    3.23    3000/3000        main [1]
-[5]     12.1    0.00    3.23    3000         dequantize_idct [5]
-                0.14    3.09   72000/72000       dequantize_idct_row [4]
+                0.00    3.50    3000/3000        main [1]
+[5]      6.5    0.00    3.50    3000         dequantize_idct [5]
+                0.22    3.28   72000/72000       dequantize_idct_row [4]
 -----------------------------------------------
-                0.12    3.04   72000/72000       dct_quantize [7]
-[6]     11.8    0.12    3.04   72000         dct_quantize_row [6]
-                2.14    0.90 2376000/2376000     dct_quant_block_8x8 [9]
+                0.51    2.77 2376000/2376000     dequantize_idct_row [4]
+[6]      6.1    0.51    2.77 2376000         dequant_idct_block_8x8 [6]
+                2.18    0.00 38016000/38016000     idct_1d [10]
+                0.32    0.00 2376000/4752000     scale_block [15]
+                0.27    0.00 4752000/9504000     transpose_block [16]
 -----------------------------------------------
-                0.00    3.16    3000/3000        main [1]
-[7]     11.8    0.00    3.16    3000         dct_quantize [7]
-                0.12    3.04   72000/72000       dct_quantize_row [6]
+                0.32    2.23   72000/72000       dct_quantize [8]
+[7]      4.7    0.32    2.23   72000         dct_quantize_row [7]
+                0.42    1.81 2376000/2376000     dct_quant_block_8x8 [9]
 -----------------------------------------------
-                0.59    2.51 2376000/2376000     dequantize_idct_row [4]
-[8]     11.5    0.59    2.51 2376000         dequant_idct_block_8x8 [8]
-                2.27    0.00 38016000/38016000     idct_1d [10]
-                0.21    0.00 4752000/9504000     transpose_block [15]
-                0.03    0.00 2376000/4752000     scale_block [18]
+                0.00    2.55    3000/3000        main [1]
+[8]      4.7    0.00    2.55    3000         dct_quantize [8]
+                0.32    2.23   72000/72000       dct_quantize_row [7]
 -----------------------------------------------
-                2.14    0.90 2376000/2376000     dct_quantize_row [6]
-[9]     11.3    2.14    0.90 2376000         dct_quant_block_8x8 [9]
-                0.67    0.00 38016000/38016000     dct_1d [14]
-                0.21    0.00 4752000/9504000     transpose_block [15]
-                0.03    0.00 2376000/4752000     scale_block [18]
+                0.42    1.81 2376000/2376000     dct_quantize_row [7]
+[9]      4.1    0.42    1.81 2376000         dct_quant_block_8x8 [9]
+                1.22    0.00 38016000/38016000     dct_1d [14]
+                0.32    0.00 2376000/4752000     scale_block [15]
+                0.27    0.00 4752000/9504000     transpose_block [16]
 -----------------------------------------------
-                2.27    0.00 38016000/38016000     dequant_idct_block_8x8 [8]
-[10]     8.5    2.27    0.00 38016000         idct_1d [10]
+                2.18    0.00 38016000/38016000     dequant_idct_block_8x8 [6]
+[10]     4.0    2.18    0.00 38016000         idct_1d [10]
 -----------------------------------------------
-                0.01    1.20    1000/1000        main [1]
-[11]     4.5    0.01    1.20    1000         write_frame [11]
-                0.31    0.89 1188000/1188000     write_interleaved_data_MCU [12]
+                1.61    0.00 1667381760/1667381760     me_block_8x8 [3]
+[11]     3.0    1.61    0.00 1667381760         sad_block_8x8 [11]
+-----------------------------------------------
+                0.01    1.33    1000/1000        main [1]
+[12]     2.5    0.01    1.33    1000         write_frame [12]
+                0.81    0.51 1188000/1188000     write_interleaved_data_MCU [13]
+                0.01    0.00    4000/4000        write_DHT_HTS [21]
                 0.00    0.00   49000/14427920     put_byte [20]
-                0.00    0.00    4000/4000        write_DHT_HTS [21]
                 0.00    0.00    1000/1000        flush_bits [22]
                 0.00    0.00    3000/11000       put_bytes [23]
 -----------------------------------------------
-                0.31    0.89 1188000/1188000     write_frame [11]
-[12]     4.5    0.31    0.89 1188000         write_interleaved_data_MCU [12]
-                0.87    0.02 50426090/50426090     put_bits [13]
+                0.81    0.51 1188000/1188000     write_frame [12]
+[13]     2.4    0.81    0.51 1188000         write_interleaved_data_MCU [13]
+                0.48    0.03 50426090/50426090     put_bits [17]
 -----------------------------------------------
-                0.87    0.02 50426090/50426090     write_interleaved_data_MCU [12]
-[13]     3.3    0.87    0.02 50426090         put_bits [13]
-                0.02    0.00 14373920/14427920     put_byte [20]
+                1.22    0.00 38016000/38016000     dct_quant_block_8x8 [9]
+[14]     2.3    1.22    0.00 38016000         dct_1d [14]
 -----------------------------------------------
-                0.67    0.00 38016000/38016000     dct_quant_block_8x8 [9]
-[14]     2.5    0.67    0.00 38016000         dct_1d [14]
+                0.32    0.00 2376000/4752000     dct_quant_block_8x8 [9]
+                0.32    0.00 2376000/4752000     dequant_idct_block_8x8 [6]
+[15]     1.2    0.64    0.00 4752000         scale_block [15]
 -----------------------------------------------
-                0.21    0.00 4752000/9504000     dct_quant_block_8x8 [9]
-                0.21    0.00 4752000/9504000     dequant_idct_block_8x8 [8]
-[15]     1.6    0.43    0.00 9504000         transpose_block [15]
+                0.27    0.00 4752000/9504000     dct_quant_block_8x8 [9]
+                0.27    0.00 4752000/9504000     dequant_idct_block_8x8 [6]
+[16]     1.0    0.54    0.00 9504000         transpose_block [16]
 -----------------------------------------------
-                0.04    0.19     990/990         main [1]
-[16]     0.8    0.04    0.19     990         c63_motion_compensate [16]
-                0.19    0.00 2352240/2352240     mc_block_8x8 [17]
+                0.48    0.03 50426090/50426090     write_interleaved_data_MCU [13]
+[17]     0.9    0.48    0.03 50426090         put_bits [17]
+                0.03    0.00 14373920/14427920     put_byte [20]
 -----------------------------------------------
-                0.19    0.00 2352240/2352240     c63_motion_compensate [16]
-[17]     0.7    0.19    0.00 2352240         mc_block_8x8 [17]
+                0.03    0.22     990/990         main [1]
+[18]     0.5    0.03    0.22     990         c63_motion_compensate [18]
+                0.22    0.00 2352240/2352240     mc_block_8x8 [19]
 -----------------------------------------------
-                0.03    0.00 2376000/4752000     dct_quant_block_8x8 [9]
-                0.03    0.00 2376000/4752000     dequant_idct_block_8x8 [8]
-[18]     0.2    0.05    0.00 4752000         scale_block [18]
------------------------------------------------
-                                                 <spontaneous>
-[19]     0.1    0.03    0.00                 read_bytes [19]
+                0.22    0.00 2352240/2352240     c63_motion_compensate [18]
+[19]     0.4    0.22    0.00 2352240         mc_block_8x8 [19]
 -----------------------------------------------
                 0.00    0.00    1000/14427920     flush_bits [22]
                 0.00    0.00    4000/14427920     write_DHT_HTS [21]
-                0.00    0.00   49000/14427920     write_frame [11]
-                0.02    0.00 14373920/14427920     put_bits [13]
-[20]     0.1    0.02    0.00 14427920         put_byte [20]
+                0.00    0.00   49000/14427920     write_frame [12]
+                0.03    0.00 14373920/14427920     put_bits [17]
+[20]     0.1    0.03    0.00 14427920         put_byte [20]
 -----------------------------------------------
-                0.00    0.00    4000/4000        write_frame [11]
-[21]     0.0    0.00    0.00    4000         write_DHT_HTS [21]
+                0.01    0.00    4000/4000        write_frame [12]
+[21]     0.0    0.01    0.00    4000         write_DHT_HTS [21]
                 0.00    0.00    4000/14427920     put_byte [20]
                 0.00    0.00    8000/11000       put_bytes [23]
 -----------------------------------------------
-                0.00    0.00    1000/1000        write_frame [11]
+                0.00    0.00    1000/1000        write_frame [12]
 [22]     0.0    0.00    0.00    1000         flush_bits [22]
                 0.00    0.00    1000/14427920     put_byte [20]
 -----------------------------------------------
-                0.00    0.00    3000/11000       write_frame [11]
+                0.00    0.00    3000/11000       write_frame [12]
                 0.00    0.00    8000/11000       write_DHT_HTS [21]
 [23]     0.0    0.00    0.00   11000         put_bytes [23]
 -----------------------------------------------
@@ -294,13 +294,13 @@ notice and this notice are preserved.
 
 Index by function name
 
-  [16] c63_motion_compensate  [24] destroy_frame          [13] put_bits
-   [2] c63_motion_estimate    [28] errcheck_fopen         [20] put_byte
-  [25] create_frame           [22] flush_bits             [23] put_bytes
-  [14] dct_1d (cosine_transform.c) [26] free_yuv          [19] read_bytes
-   [9] dct_quant_block_8x8    [30] get_cl_args            [27] read_yuv
-   [7] dct_quantize           [10] idct_1d (cosine_transform.c) [18] scale_block (cosine_transform.c)
-   [6] dct_quantize_row       [29] init_c63_enc           [15] transpose_block (cosine_transform.c)
-   [8] dequant_idct_block_8x8  [1] main                   [21] write_DHT_HTS (c63_write.c)
-   [5] dequantize_idct        [17] mc_block_8x8 (motion_estimate.c) [11] write_frame
-   [4] dequantize_idct_row     [3] me_block_8x8 (motion_estimate.c) [12] write_interleaved_data_MCU (c63_write.c)
+  [18] c63_motion_compensate  [24] destroy_frame          [20] put_byte
+   [2] c63_motion_estimate    [28] errcheck_fopen         [23] put_bytes
+  [25] create_frame           [22] flush_bits             [27] read_yuv
+  [14] dct_1d (cosine_transform.c) [26] free_yuv          [11] sad_block_8x8
+   [9] dct_quant_block_8x8    [30] get_cl_args            [15] scale_block (cosine_transform.c)
+   [8] dct_quantize           [10] idct_1d (cosine_transform.c) [16] transpose_block (cosine_transform.c)
+   [7] dct_quantize_row       [29] init_c63_enc           [21] write_DHT_HTS (c63_write.c)
+   [6] dequant_idct_block_8x8 [19] mc_block_8x8 (motion_estimate.c) [12] write_frame
+   [5] dequantize_idct         [3] me_block_8x8 (motion_estimate.c) [13] write_interleaved_data_MCU (c63_write.c)
+   [4] dequantize_idct_row    [17] put_bits

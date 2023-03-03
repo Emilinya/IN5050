@@ -1,0 +1,294 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 76.92     17.11    17.11  2352240     0.01     0.01  me_block_8x8
+  6.16     18.48     1.37  2376000     0.00     0.00  dct_quant_block_8x8
+  4.75     19.53     1.06  2376000     0.00     0.00  dequant_idct_block_8x8
+  2.77     20.15     0.62  4752000     0.00     0.00  scale_block
+  2.38     20.68     0.53  1188000     0.00     0.00  write_interleaved_data_MCU
+  1.53     21.02     0.34    72000     0.00     0.03  dct_quantize_row
+  1.51     21.35     0.34  2352240     0.00     0.00  mc_block_8x8
+  1.03     21.58     0.23                             read_bytes
+  0.99     21.80     0.22    72000     0.00     0.02  dequantize_idct_row
+  0.90     22.00     0.20 14427730     0.00     0.00  put_byte
+  0.40     22.10     0.09  9504000     0.00     0.00  transpose_block
+  0.27     22.16     0.06 50430680     0.00     0.00  put_bits
+  0.18     22.20     0.04      990     0.04     0.38  c63_motion_compensate
+  0.18     22.24     0.04      990     0.04    17.32  c63_motion_estimate
+  0.04     22.25     0.01     4000     0.00     0.00  write_DHT_HTS
+  0.04     22.26     0.01     1000     0.01     0.81  write_frame
+  0.00     22.26     0.00    11000     0.00     0.00  put_bytes
+  0.00     22.26     0.00     3000     0.00     0.69  dct_quantize
+  0.00     22.26     0.00     3000     0.00     0.54  dequantize_idct
+  0.00     22.26     0.00     1010     0.00     0.00  destroy_frame
+  0.00     22.26     0.00     1000     0.00     0.00  create_frame
+  0.00     22.26     0.00     1000     0.00     0.00  flush_bits
+  0.00     22.26     0.00     1000     0.00     0.00  free_yuv
+  0.00     22.26     0.00     1000     0.00     0.00  read_yuv
+  0.00     22.26     0.00       21     0.00     0.00  errcheck_fopen
+  0.00     22.26     0.00       10     0.00     0.00  init_c63_enc
+  0.00     22.26     0.00        1     0.00     0.00  get_cl_args
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.04% of 22.26 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.0    0.00   22.02                 main [1]
+                0.04   17.11     990/990         c63_motion_estimate [2]
+                0.00    2.06    3000/3000        dct_quantize [5]
+                0.00    1.63    3000/3000        dequantize_idct [8]
+                0.01    0.80    1000/1000        write_frame [10]
+                0.04    0.34     990/990         c63_motion_compensate [13]
+                0.00    0.00    1010/1010        destroy_frame [22]
+                0.00    0.00    1000/1000        free_yuv [24]
+                0.00    0.00    1000/1000        read_yuv [25]
+                0.00    0.00    1000/1000        create_frame [23]
+                0.00    0.00      21/21          errcheck_fopen [26]
+                0.00    0.00      10/10          init_c63_enc [27]
+                0.00    0.00       1/1           get_cl_args [28]
+-----------------------------------------------
+                0.04   17.11     990/990         main [1]
+[2]     77.0    0.04   17.11     990         c63_motion_estimate [2]
+               17.11    0.00 2352240/2352240     me_block_8x8 [3]
+-----------------------------------------------
+               17.11    0.00 2352240/2352240     c63_motion_estimate [2]
+[3]     76.9   17.11    0.00 2352240         me_block_8x8 [3]
+-----------------------------------------------
+                0.34    1.72   72000/72000       dct_quantize [5]
+[4]      9.3    0.34    1.72   72000         dct_quantize_row [4]
+                1.37    0.35 2376000/2376000     dct_quant_block_8x8 [6]
+-----------------------------------------------
+                0.00    2.06    3000/3000        main [1]
+[5]      9.3    0.00    2.06    3000         dct_quantize [5]
+                0.34    1.72   72000/72000       dct_quantize_row [4]
+-----------------------------------------------
+                1.37    0.35 2376000/2376000     dct_quantize_row [4]
+[6]      7.7    1.37    0.35 2376000         dct_quant_block_8x8 [6]
+                0.31    0.00 2376000/4752000     scale_block [12]
+                0.05    0.00 4752000/9504000     transpose_block [18]
+-----------------------------------------------
+                0.22    1.41   72000/72000       dequantize_idct [8]
+[7]      7.3    0.22    1.41   72000         dequantize_idct_row [7]
+                1.06    0.35 2376000/2376000     dequant_idct_block_8x8 [9]
+-----------------------------------------------
+                0.00    1.63    3000/3000        main [1]
+[8]      7.3    0.00    1.63    3000         dequantize_idct [8]
+                0.22    1.41   72000/72000       dequantize_idct_row [7]
+-----------------------------------------------
+                1.06    0.35 2376000/2376000     dequantize_idct_row [7]
+[9]      6.3    1.06    0.35 2376000         dequant_idct_block_8x8 [9]
+                0.31    0.00 2376000/4752000     scale_block [12]
+                0.05    0.00 4752000/9504000     transpose_block [18]
+-----------------------------------------------
+                0.01    0.80    1000/1000        main [1]
+[10]     3.6    0.01    0.80    1000         write_frame [10]
+                0.53    0.26 1188000/1188000     write_interleaved_data_MCU [11]
+                0.01    0.00    4000/4000        write_DHT_HTS [19]
+                0.00    0.00   49000/14427730     put_byte [17]
+                0.00    0.00    1000/1000        flush_bits [20]
+                0.00    0.00    3000/11000       put_bytes [21]
+-----------------------------------------------
+                0.53    0.26 1188000/1188000     write_frame [10]
+[11]     3.5    0.53    0.26 1188000         write_interleaved_data_MCU [11]
+                0.06    0.20 50430680/50430680     put_bits [15]
+-----------------------------------------------
+                0.31    0.00 2376000/4752000     dct_quant_block_8x8 [6]
+                0.31    0.00 2376000/4752000     dequant_idct_block_8x8 [9]
+[12]     2.8    0.62    0.00 4752000         scale_block [12]
+-----------------------------------------------
+                0.04    0.34     990/990         main [1]
+[13]     1.7    0.04    0.34     990         c63_motion_compensate [13]
+                0.34    0.00 2352240/2352240     mc_block_8x8 [14]
+-----------------------------------------------
+                0.34    0.00 2352240/2352240     c63_motion_compensate [13]
+[14]     1.5    0.34    0.00 2352240         mc_block_8x8 [14]
+-----------------------------------------------
+                0.06    0.20 50430680/50430680     write_interleaved_data_MCU [11]
+[15]     1.2    0.06    0.20 50430680         put_bits [15]
+                0.20    0.00 14373730/14427730     put_byte [17]
+-----------------------------------------------
+                                                 <spontaneous>
+[16]     1.0    0.23    0.00                 read_bytes [16]
+-----------------------------------------------
+                0.00    0.00    1000/14427730     flush_bits [20]
+                0.00    0.00    4000/14427730     write_DHT_HTS [19]
+                0.00    0.00   49000/14427730     write_frame [10]
+                0.20    0.00 14373730/14427730     put_bits [15]
+[17]     0.9    0.20    0.00 14427730         put_byte [17]
+-----------------------------------------------
+                0.05    0.00 4752000/9504000     dct_quant_block_8x8 [6]
+                0.05    0.00 4752000/9504000     dequant_idct_block_8x8 [9]
+[18]     0.4    0.09    0.00 9504000         transpose_block [18]
+-----------------------------------------------
+                0.01    0.00    4000/4000        write_frame [10]
+[19]     0.0    0.01    0.00    4000         write_DHT_HTS [19]
+                0.00    0.00    4000/14427730     put_byte [17]
+                0.00    0.00    8000/11000       put_bytes [21]
+-----------------------------------------------
+                0.00    0.00    1000/1000        write_frame [10]
+[20]     0.0    0.00    0.00    1000         flush_bits [20]
+                0.00    0.00    1000/14427730     put_byte [17]
+-----------------------------------------------
+                0.00    0.00    3000/11000       write_frame [10]
+                0.00    0.00    8000/11000       write_DHT_HTS [19]
+[21]     0.0    0.00    0.00   11000         put_bytes [21]
+-----------------------------------------------
+                0.00    0.00    1010/1010        main [1]
+[22]     0.0    0.00    0.00    1010         destroy_frame [22]
+-----------------------------------------------
+                0.00    0.00    1000/1000        main [1]
+[23]     0.0    0.00    0.00    1000         create_frame [23]
+-----------------------------------------------
+                0.00    0.00    1000/1000        main [1]
+[24]     0.0    0.00    0.00    1000         free_yuv [24]
+-----------------------------------------------
+                0.00    0.00    1000/1000        main [1]
+[25]     0.0    0.00    0.00    1000         read_yuv [25]
+-----------------------------------------------
+                0.00    0.00      21/21          main [1]
+[26]     0.0    0.00    0.00      21         errcheck_fopen [26]
+-----------------------------------------------
+                0.00    0.00      10/10          main [1]
+[27]     0.0    0.00    0.00      10         init_c63_enc [27]
+-----------------------------------------------
+                0.00    0.00       1/1           main [1]
+[28]     0.0    0.00    0.00       1         get_cl_args [28]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [13] c63_motion_compensate  [22] destroy_frame          [17] put_byte
+   [2] c63_motion_estimate    [26] errcheck_fopen         [21] put_bytes
+  [23] create_frame           [20] flush_bits             [16] read_bytes
+   [6] dct_quant_block_8x8    [24] free_yuv               [25] read_yuv
+   [5] dct_quantize           [28] get_cl_args            [12] scale_block (cosine_transform.c)
+   [4] dct_quantize_row       [27] init_c63_enc           [18] transpose_block (cosine_transform.c)
+   [9] dequant_idct_block_8x8 [14] mc_block_8x8 (motion_estimate.c) [19] write_DHT_HTS (c63_write.c)
+   [8] dequantize_idct         [3] me_block_8x8 (motion_estimate.c) [10] write_frame
+   [7] dequantize_idct_row    [15] put_bits               [11] write_interleaved_data_MCU (c63_write.c)

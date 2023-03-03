@@ -1,9 +1,15 @@
-Encoding the full 300 frames of foreman.yuv
+Encoding the full 300 frames of foreman.yuv, average of 10 runs, timed with time
 
 reference:
-    27.454 s
+    26.6906 ± 0.1377 s
 improved:
-    6.575 s
+    6.6357 ± 0.0370 s
 
 Speedup:
-    4.18 x
+    4.0223 ± 0.0306 
+
+Data:
+fast:
+    6.744 6.636 6.637 6.621 6.621 6.629 6.622 6.620 6.620 6.607
+reference:
+    26.922 26.642 26.668 26.724 26.606 26.969 26.675 26.550 26.595 26.555
