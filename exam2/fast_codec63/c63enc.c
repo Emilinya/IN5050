@@ -1,80 +1,54 @@
 #include <assert.h>
 #include <errno.h>
-#include <getopt.h>
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "c63.h"
-#include "c63_write.h"
-#include "common.h"
-#include "me.h"
+#include "utils.h"
 #include "tables.h"
+#include "cl_utils.h"
+#include "c63_write.h"
+#include "motion_estimate.h"
+#include "cosine_transform.h"
 
-static char *output_file, *input_file;
-FILE *outfile;
-
-static int limit_numframes = 0;
-
-static uint32_t width;
-static uint32_t height;
-
-/* getopt */
-extern int optind;
-extern char *optarg;
-
-/* Read planar YUV frames with 4:2:0 chroma sub-sampling */
-static yuv_t* read_yuv(FILE *file, struct c63_common *cm)
+struct c63_common *init_c63_enc(int width, int height)
 {
-  size_t len = 0;
-  yuv_t *image = malloc(sizeof(*image));
+  struct c63_common *cm = calloc(1, sizeof(struct c63_common));
 
-  /* Read Y. The size of Y is the same as the size of the image. The indices
-     represents the color component (0 is Y, 1 is U, and 2 is V) */
-  image->Y = calloc(1, cm->padw[Y_COMPONENT]*cm->padh[Y_COMPONENT]);
-  len += fread(image->Y, 1, width*height, file);
+  cm->width = width;
+  cm->height = height;
 
-  /* Read U. Given 4:2:0 chroma sub-sampling, the size is 1/4 of Y
-     because (height/2)*(width/2) = (height*width)/4. */
-  image->U = calloc(1, cm->padw[U_COMPONENT]*cm->padh[U_COMPONENT]);
-  len += fread(image->U, 1, (width*height)/4, file);
+  cm->padw[Y_COMPONENT] = cm->ypw = (uint32_t)(ceil(width / 16.0f) * 16);
+  cm->padh[Y_COMPONENT] = cm->yph = (uint32_t)(ceil(height / 16.0f) * 16);
+  cm->padw[U_COMPONENT] = cm->upw = (uint32_t)(ceil(width * UX / (YX * 8.0f)) * 8);
+  cm->padh[U_COMPONENT] = cm->uph = (uint32_t)(ceil(height * UY / (YY * 8.0f)) * 8);
+  cm->padw[V_COMPONENT] = cm->vpw = (uint32_t)(ceil(width * VX / (YX * 8.0f)) * 8);
+  cm->padh[V_COMPONENT] = cm->vph = (uint32_t)(ceil(height * VY / (YY * 8.0f)) * 8);
 
-  /* Read V. Given 4:2:0 chroma sub-sampling, the size is 1/4 of Y. */
-  image->V = calloc(1, cm->padw[V_COMPONENT]*cm->padh[V_COMPONENT]);
-  len += fread(image->V, 1, (width*height)/4, file);
+  cm->mb_cols = cm->ypw / 8;
+  cm->mb_rows = cm->yph / 8;
 
-  if (ferror(file))
+  /* Quality parameters -- Home exam deliveries should have original values,
+   i.e., quantization factor should be 25, search range should be 16, and the
+   keyframe interval should be 100. */
+  cm->qp = 25;                 // Constant quantization factor. Range: [1..50]
+  cm->me_search_range = 16;    // Pixels in every direction
+  cm->keyframe_interval = 100; // Distance between keyframes
+
+  /* Initialize quantization tables */
+  for (int i = 0; i < 64; ++i)
   {
-    perror("ferror");
-    exit(EXIT_FAILURE);
+    cm->quanttbl[Y_COMPONENT][i] = yquanttbl_def[i] / (cm->qp / 10.0);
+    cm->quanttbl[U_COMPONENT][i] = uvquanttbl_def[i] / (cm->qp / 10.0);
+    cm->quanttbl[V_COMPONENT][i] = uvquanttbl_def[i] / (cm->qp / 10.0);
   }
 
-  if (feof(file))
-  {
-    free(image->Y);
-    free(image->U);
-    free(image->V);
-    free(image);
-
-    return NULL;
-  }
-  else if (len != width*height*1.5)
-  {
-    fprintf(stderr, "Reached end of file, but incorrect bytes read.\n");
-    fprintf(stderr, "Wrong input? (height: %d width: %d)\n", height, width);
-
-    free(image->Y);
-    free(image->U);
-    free(image->V);
-    free(image);
-
-    return NULL;
-  }
-
-  return image;
+  return cm;
 }
 
 static void c63_encode_image(struct c63_common *cm, yuv_t *image)
@@ -89,10 +63,11 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   {
     cm->curframe->keyframe = 1;
     cm->frames_since_keyframe = 0;
-
-    fprintf(stderr, " (keyframe) ");
   }
-  else { cm->curframe->keyframe = 0; }
+  else
+  {
+    cm->curframe->keyframe = 0;
+  }
 
   if (!cm->curframe->keyframe)
   {
@@ -104,27 +79,27 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   }
 
   /* DCT and Quantization */
-  dct_quantize(image->Y, cm->curframe->predicted->Y, cm->padw[Y_COMPONENT],
-      cm->padh[Y_COMPONENT], cm->curframe->residuals->Ydct,
-      cm->quanttbl[Y_COMPONENT]);
+  dct_quantize(image->Y, cm->curframe->predicted->Y, cm->ypw,
+               cm->yph, cm->curframe->residuals->Ydct,
+               cm->quanttbl[Y_COMPONENT]);
 
   dct_quantize(image->U, cm->curframe->predicted->U, cm->padw[U_COMPONENT],
-      cm->padh[U_COMPONENT], cm->curframe->residuals->Udct,
-      cm->quanttbl[U_COMPONENT]);
+               cm->uph, cm->curframe->residuals->Udct,
+               cm->quanttbl[U_COMPONENT]);
 
-  dct_quantize(image->V, cm->curframe->predicted->V, cm->padw[V_COMPONENT],
-      cm->padh[V_COMPONENT], cm->curframe->residuals->Vdct,
-      cm->quanttbl[V_COMPONENT]);
+  dct_quantize(image->V, cm->curframe->predicted->V, cm->vpw,
+               cm->vph, cm->curframe->residuals->Vdct,
+               cm->quanttbl[V_COMPONENT]);
 
   /* Reconstruct frame for inter-prediction */
   dequantize_idct(cm->curframe->residuals->Ydct, cm->curframe->predicted->Y,
-      cm->ypw, cm->yph, cm->curframe->recons->Y, cm->quanttbl[Y_COMPONENT]);
+                  cm->ypw, cm->yph, cm->curframe->recons->Y, cm->quanttbl[Y_COMPONENT]);
   dequantize_idct(cm->curframe->residuals->Udct, cm->curframe->predicted->U,
-      cm->upw, cm->uph, cm->curframe->recons->U, cm->quanttbl[U_COMPONENT]);
+                  cm->upw, cm->uph, cm->curframe->recons->U, cm->quanttbl[U_COMPONENT]);
   dequantize_idct(cm->curframe->residuals->Vdct, cm->curframe->predicted->V,
-      cm->vpw, cm->vph, cm->curframe->recons->V, cm->quanttbl[V_COMPONENT]);
+                  cm->vpw, cm->vph, cm->curframe->recons->V, cm->quanttbl[V_COMPONENT]);
 
-  /* Function dump_image(), found in common.c, can be used here to check if the
+  /* Function dump_image(), found in utils.c, can be used here to check if the
      prediction is correct */
 
   write_frame(cm);
@@ -133,159 +108,117 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   ++cm->frames_since_keyframe;
 }
 
-struct c63_common* init_c63_enc(int width, int height)
-{
-  int i;
-
-  /* calloc() sets allocated memory to zero */
-  struct c63_common *cm = calloc(1, sizeof(struct c63_common));
-
-  cm->width = width;
-  cm->height = height;
-
-  cm->padw[Y_COMPONENT] = cm->ypw = (uint32_t)(ceil(width/16.0f)*16);
-  cm->padh[Y_COMPONENT] = cm->yph = (uint32_t)(ceil(height/16.0f)*16);
-  cm->padw[U_COMPONENT] = cm->upw = (uint32_t)(ceil(width*UX/(YX*8.0f))*8);
-  cm->padh[U_COMPONENT] = cm->uph = (uint32_t)(ceil(height*UY/(YY*8.0f))*8);
-  cm->padw[V_COMPONENT] = cm->vpw = (uint32_t)(ceil(width*VX/(YX*8.0f))*8);
-  cm->padh[V_COMPONENT] = cm->vph = (uint32_t)(ceil(height*VY/(YY*8.0f))*8);
-
-  cm->mb_cols = cm->ypw / 8;
-  cm->mb_rows = cm->yph / 8;
-
-  /* Quality parameters -- Home exam deliveries should have original values,
-   i.e., quantization factor should be 25, search range should be 16, and the
-   keyframe interval should be 100. */
-  cm->qp = 25;                  // Constant quantization factor. Range: [1..50]
-  cm->me_search_range = 16;     // Pixels in every direction
-  cm->keyframe_interval = 100;  // Distance between keyframes
-
-  /* Initialize quantization tables */
-  for (i = 0; i < 64; ++i)
-  {
-    cm->quanttbl[Y_COMPONENT][i] = yquanttbl_def[i] / (cm->qp / 10.0);
-    cm->quanttbl[U_COMPONENT][i] = uvquanttbl_def[i] / (cm->qp / 10.0);
-    cm->quanttbl[V_COMPONENT][i] = uvquanttbl_def[i] / (cm->qp / 10.0);
-  }
-
-  return cm;
-}
-
-void free_c63_enc(struct c63_common* cm)
-{
-  destroy_frame(cm->curframe);
-  free(cm);
-}
-
-static void print_help()
-{
-  printf("Usage: ./c63enc [options] input_file\n");
-  printf("Commandline options:\n");
-  printf("  -h                             Height of images to compress\n");
-  printf("  -w                             Width of images to compress\n");
-  printf("  -o                             Output file (.c63)\n");
-  printf("  [-f]                           Limit number of frames to encode\n");
-  printf("\n");
-
-  exit(EXIT_FAILURE);
-}
-
 int main(int argc, char **argv)
 {
-  int c;
-  yuv_t *image;
+  cl_args_t *args = get_cl_args(argc, argv);
 
-  if (argc == 1) { print_help(); }
-
-  while ((c = getopt(argc, argv, "h:w:o:f:i:")) != -1)
+  if (args->run_count)
   {
-    switch (c)
+    printf("Running encoder to %d times.\n", args->run_count);
+  }
+  if (args->frame_limit)
+  {
+    printf("Limited to %d frames.\n", args->frame_limit);
+  }
+
+  double *runtimes = calloc(args->run_count, sizeof(double));
+  int num_runs = 1;
+  if (args->run_count)
+  {
+    num_runs = args->run_count;
+  }
+
+  for (int i = 0; i < num_runs; i++)
+  {
+    FILE *outfile = errcheck_fopen(args->output_file, "wb");
+
+    struct c63_common *cm = init_c63_enc(args->width, args->height);
+    cm->e_ctx.fp = outfile;
+
+    char *input_file = argv[optind];
+    FILE *infile = errcheck_fopen(input_file, "rb");
+
+    /* Encode input frames */
+    int numframes = 0;
+
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    while (1)
     {
-      case 'h':
-        height = atoi(optarg);
+      yuv_t *image = read_yuv(infile, cm);
+      if (!image)
+      {
         break;
-      case 'w':
-        width = atoi(optarg);
+      }
+
+      printf("\rEncoding frame %d", numframes);
+      fflush(stdout);
+      c63_encode_image(cm, image);
+
+      free_yuv(image);
+
+      ++numframes;
+
+      if (args->frame_limit && numframes >= args->frame_limit)
+      {
         break;
-      case 'o':
-        output_file = optarg;
-        break;
-      case 'f':
-        limit_numframes = atoi(optarg);
-        break;
-      default:
-        print_help();
-        break;
+      }
     }
+    printf("\n");
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+
+    if (args->run_count)
+    {
+      double time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+      runtimes[i] = time;
+    }
+
+    destroy_frame(cm->curframe);
+    free(cm);
+
+    fclose(outfile);
+    fclose(infile);
   }
 
-  if (optind >= argc)
+  if (args->run_count)
   {
-    fprintf(stderr, "Error getting program options, try --help.\n");
-    exit(EXIT_FAILURE);
+    double avg = 0;
+    double min = 1e6;
+    double max = 0;
+    for (size_t i = 0; i < args->run_count; i++)
+    {
+      avg += runtimes[i];
+      min = MIN(min, runtimes[i]);
+      max = MAX(max, runtimes[i]);
+    }
+    avg /= (double)args->run_count;
+
+    double std = 0;
+    for (size_t i = 0; i < args->run_count; i++)
+    {
+      double diff = runtimes[i] - avg;
+      std += diff * diff;
+    }
+    std = sqrt(std / (double)args->run_count);
+
+    FILE *perf_file = errcheck_fopen("encoder_runtimes.txt", "w");
+    fprintf(
+        perf_file, "Runtime data from %d runs. Each run encoded %d frames of a %dx%d video.\n",
+        args->run_count, args->frame_limit, args->width, args->height);
+    fprintf(perf_file, "avg ± std [s] | min [s] | max [s]\n");
+    fprintf(perf_file, "%f ± %f | %f | %f\n", avg, std, min, max);
+    fprintf(perf_file, "\nData:\n");
+    for (size_t i = 0; i < args->run_count - 1; i++)
+    {
+      fprintf(perf_file, "%f ", runtimes[i]);
+    }
+    fprintf(perf_file, "%f\n", runtimes[args->run_count - 1]);
+    fclose(perf_file);
+
+    free(runtimes);
   }
 
-  outfile = fopen(output_file, "wb");
-
-  if (outfile == NULL)
-  {
-    perror("fopen");
-    exit(EXIT_FAILURE);
-  }
-
-  struct c63_common *cm = init_c63_enc(width, height);
-  cm->e_ctx.fp = outfile;
-
-  input_file = argv[optind];
-
-  if (limit_numframes) { printf("Limited to %d frames.\n", limit_numframes); }
-
-  FILE *infile = fopen(input_file, "rb");
-
-  if (infile == NULL)
-  {
-    perror("fopen");
-    exit(EXIT_FAILURE);
-  }
-
-  /* Encode input frames */
-  int numframes = 0;
-
-  while (1)
-  {
-    image = read_yuv(infile, cm);
-
-    if (!image) { break; }
-
-    printf("Encoding frame %d, ", numframes);
-    c63_encode_image(cm, image);
-
-    free(image->Y);
-    free(image->U);
-    free(image->V);
-    free(image);
-
-    printf("Done!\n");
-
-    ++numframes;
-
-    if (limit_numframes && numframes >= limit_numframes) { break; }
-  }
-
-  free_c63_enc(cm);
-  fclose(outfile);
-  fclose(infile);
-
-  //int i, j;
-  //for (i = 0; i < 2; ++i)
-  //{
-  //  printf("int freq[] = {");
-  //  for (j = 0; j < ARRAY_SIZE(frequencies[i]); ++j)
-  //  {
-  //    printf("%d, ", frequencies[i][j]);
-  //  }
-  //  printf("};\n");
-  //}
+  free(args);
 
   return EXIT_SUCCESS;
 }
