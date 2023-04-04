@@ -87,13 +87,13 @@ struct c63_common
 
   int mb_cols, mb_rows;
 
-  uint8_t qp;                         // Quality parameter
+  uint8_t qp;               // Quality parameter
 
   int me_search_range;
 
   uint8_t quanttbl[COLOR_COMPONENTS][64];
 
-  struct frame *refframe;
+  yuv_t *ref_recons;        // Reconstructed image from previous frame
   struct frame *curframe;
 
   int framenum;

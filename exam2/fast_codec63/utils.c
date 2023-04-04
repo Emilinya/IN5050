@@ -58,6 +58,16 @@ yuv_t *read_yuv(FILE *file, struct c63_common *cm)
     return image;
 }
 
+yuv_t *create_yuv(struct c63_common *cm)
+{
+    yuv_t *yuv = malloc(sizeof(yuv_t));
+    yuv->Y = calloc(cm->ypw * cm->yph, sizeof(uint8_t));
+    yuv->U = calloc(cm->upw * cm->uph, sizeof(uint8_t));
+    yuv->V = calloc(cm->vpw * cm->vph, sizeof(uint8_t));
+
+    return yuv;
+}
+
 void free_yuv(yuv_t *image)
 {
     free(image->Y);
@@ -66,21 +76,12 @@ void free_yuv(yuv_t *image)
     free(image);
 }
 
-struct frame *create_frame(struct c63_common *cm, yuv_t *image)
+struct frame *create_frame(struct c63_common *cm)
 {
     struct frame *f = malloc(sizeof(struct frame));
 
-    f->orig = image;
-
-    f->recons = malloc(sizeof(yuv_t));
-    f->recons->Y = malloc(cm->ypw * cm->yph);
-    f->recons->U = malloc(cm->upw * cm->uph);
-    f->recons->V = malloc(cm->vpw * cm->vph);
-
-    f->predicted = malloc(sizeof(yuv_t));
-    f->predicted->Y = calloc(cm->ypw * cm->yph, sizeof(uint8_t));
-    f->predicted->U = calloc(cm->upw * cm->uph, sizeof(uint8_t));
-    f->predicted->V = calloc(cm->vpw * cm->vph, sizeof(uint8_t));
+    f->recons = create_yuv(cm);
+    f->predicted = create_yuv(cm);
 
     f->residuals = malloc(sizeof(dct_t));
     f->residuals->Ydct = calloc(cm->ypw * cm->yph, sizeof(int16_t));
@@ -105,20 +106,9 @@ void destroy_frame(struct frame *f)
         return;
     }
 
-    free(f->recons->Y);
-    free(f->recons->U);
-    free(f->recons->V);
-    free(f->recons);
-
-    free(f->residuals->Ydct);
-    free(f->residuals->Udct);
-    free(f->residuals->Vdct);
-    free(f->residuals);
-
-    free(f->predicted->Y);
-    free(f->predicted->U);
-    free(f->predicted->V);
-    free(f->predicted);
+    free_yuv(f->recons);
+    free_yuv(f->residuals);
+    free_yuv(f->predicted);
 
     free(f->mbs[Y_COMPONENT]);
     free(f->mbs[U_COMPONENT]);

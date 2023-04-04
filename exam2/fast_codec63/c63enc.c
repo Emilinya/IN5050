@@ -51,13 +51,8 @@ struct c63_common *init_c63_enc(int width, int height)
   return cm;
 }
 
-static void c63_encode_image(struct c63_common *cm, yuv_t *image)
+static void c63_encode_image(struct c63_common *cm)
 {
-  /* Advance to next frame */
-  destroy_frame(cm->refframe);
-  cm->refframe = cm->curframe;
-  cm->curframe = create_frame(cm, image);
-
   /* Check if keyframe */
   if (cm->framenum == 0 || cm->frames_since_keyframe == cm->keyframe_interval)
   {
@@ -79,15 +74,15 @@ static void c63_encode_image(struct c63_common *cm, yuv_t *image)
   }
 
   /* DCT and Quantization */
-  dct_quantize(image->Y, cm->curframe->predicted->Y, cm->ypw,
+  dct_quantize(cm->curframe->orig->Y, cm->curframe->predicted->Y, cm->ypw,
                cm->yph, cm->curframe->residuals->Ydct,
                cm->quanttbl[Y_COMPONENT]);
 
-  dct_quantize(image->U, cm->curframe->predicted->U, cm->padw[U_COMPONENT],
+  dct_quantize(cm->curframe->orig->U, cm->curframe->predicted->U, cm->padw[U_COMPONENT],
                cm->uph, cm->curframe->residuals->Udct,
                cm->quanttbl[U_COMPONENT]);
 
-  dct_quantize(image->V, cm->curframe->predicted->V, cm->vpw,
+  dct_quantize(cm->curframe->orig->V, cm->curframe->predicted->V, cm->vpw,
                cm->vph, cm->curframe->residuals->Vdct,
                cm->quanttbl[V_COMPONENT]);
 
@@ -134,6 +129,8 @@ int main(int argc, char **argv)
 
     struct c63_common *cm = init_c63_enc(args->width, args->height);
     cm->e_ctx.fp = outfile;
+    cm->curframe = create_frame(cm);
+    cm->ref_recons = create_yuv(cm);
 
     char *input_file = argv[optind];
     FILE *infile = errcheck_fopen(input_file, "rb");
@@ -150,10 +147,11 @@ int main(int argc, char **argv)
       {
         break;
       }
+      cm->curframe->orig = image;
 
       printf("\rEncoding frame %d", numframes);
       fflush(stdout);
-      c63_encode_image(cm, image);
+      c63_encode_image(cm);
 
       free_yuv(image);
 
@@ -163,6 +161,11 @@ int main(int argc, char **argv)
       {
         break;
       }
+
+      // swap frames to get ready for next frame
+      yuv_t *tmp = cm->ref_recons;
+      cm->ref_recons = cm->curframe->recons;
+      cm->curframe->recons = tmp;
     }
     printf("\n");
     clock_gettime(CLOCK_MONOTONIC_RAW, &end);
@@ -174,6 +177,7 @@ int main(int argc, char **argv)
     }
 
     destroy_frame(cm->curframe);
+    free_yuv(cm->ref_recons);
     free(cm);
 
     fclose(outfile);
@@ -201,7 +205,7 @@ int main(int argc, char **argv)
     }
     std = sqrt(std / (double)args->run_count);
 
-    FILE *perf_file = errcheck_fopen("encoder_runtimes.txt", "w");
+    FILE *perf_file = errcheck_fopen("profiling/runtimes.txt", "w");
     fprintf(
         perf_file, "Runtime data from %d runs. Each run encoded %d frames of a %dx%d video.\n",
         args->run_count, args->frame_limit, args->width, args->height);
@@ -214,10 +218,9 @@ int main(int argc, char **argv)
     }
     fprintf(perf_file, "%f\n", runtimes[args->run_count - 1]);
     fclose(perf_file);
-
-    free(runtimes);
   }
 
+  free(runtimes);
   free(args);
 
   return EXIT_SUCCESS;
