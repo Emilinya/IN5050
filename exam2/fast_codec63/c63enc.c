@@ -203,7 +203,7 @@ int main(int argc, char **argv)
       double diff = runtimes[i] - avg;
       std += diff * diff;
     }
-    std = sqrt(std / (double)args->run_count);
+    std = sqrt(std) / (double)args->run_count;
 
     FILE *perf_file = errcheck_fopen("profiling/runtimes.txt", "w");
     fprintf(

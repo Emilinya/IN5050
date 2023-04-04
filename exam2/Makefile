@@ -1,6 +1,7 @@
 FAST_SRC = $(wildcard fast_codec63/*.c) $(wildcard fast_codec63/*.h)
 REFERENCE_SRC = $(wildcard reference_codec63/*.c) $(wildcard reference_codec63/*.h)
 
+YUV_FILE=/mnt/sdcard/cipr/foreman.yuv
 COMP_FRAMES?=10
 PREV_FRAMES=$(shell cat test/fc.txt)
 
@@ -14,11 +15,18 @@ test: test/fast_foreman.c63 test/reference_foreman.c63
     fi
 	@rm test/fast_foreman.c63 test/reference_foreman.c63;
 
+.PHONY: profile
+profile: fast_codec63/c63enc
+	fast_codec63/c63enc -w 352 -h 288 -f 100 -o profiled_fast_foreman.c63 -p 10 $(YUV_FILE)
+	gprof fast_codec63/c63enc gmon.out > profiling/profile.txt; \
+	rm profiled_fast_foreman.c63
+	rm gmon.out
+
 test/fast_foreman.c63: fast_codec63/c63enc
-	fast_codec63/c63enc -w 352 -h 288 -f $(COMP_FRAMES) -o test/fast_foreman.c63 /mnt/sdcard/cipr/foreman.yuv
+	fast_codec63/c63enc -w 352 -h 288 -f $(COMP_FRAMES) -o test/fast_foreman.c63 $(YUV_FILE)
 
 test/reference_foreman.c63: reference_codec63/c63enc
-	reference_codec63/c63enc -w 352 -h 288 -f $(COMP_FRAMES) -o test/reference_foreman.c63 /mnt/sdcard/cipr/foreman.yuv
+	reference_codec63/c63enc -w 352 -h 288 -f $(COMP_FRAMES) -o test/reference_foreman.c63 $(YUV_FILE)
 
 fast_codec63/c63enc: $(FAST_SRC)
 	make -C fast_codec63/ c63enc
