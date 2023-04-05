@@ -107,8 +107,12 @@ void destroy_frame(struct frame *f)
     }
 
     free_yuv(f->recons);
-    free_yuv(f->residuals);
     free_yuv(f->predicted);
+
+    free(f->residuals->Ydct);
+    free(f->residuals->Udct);
+    free(f->residuals->Vdct);
+    free(f->residuals);
 
     free(f->mbs[Y_COMPONENT]);
     free(f->mbs[U_COMPONENT]);
