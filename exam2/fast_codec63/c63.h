@@ -78,6 +78,12 @@ struct frame
   int keyframe;
 };
 
+struct gpu_frame
+{
+  yuv_t *input;
+  yuv_t *reference;
+};
+
 struct c63_common
 {
   int width, height;

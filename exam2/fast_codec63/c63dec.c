@@ -326,9 +326,9 @@ void parse_sof0(struct c63_common *cm)
   }
 
   /* Advance to next frame */
-  destroy_frame(cm->refframe);
-  cm->refframe = cm->curframe;
-  cm->curframe = create_frame(cm);
+  yuv_t *tmp = cm->ref_recons;
+  cm->ref_recons = cm->curframe->recons;
+  cm->curframe->recons = tmp;
 
   /* Is this a keyframe */
   cm->curframe->keyframe = get_byte(cm->e_ctx.fp);

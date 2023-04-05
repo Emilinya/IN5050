@@ -1,5 +1,5 @@
 FAST_SRC = $(wildcard fast_codec63/*.c) $(wildcard fast_codec63/*.h)
-REFERENCE_SRC = $(wildcard reference_codec63/*.c) $(wildcard reference_codec63/*.h)
+REFERENCE_SRC = $(wildcard reference_codec63/*.c) $(wildcard reference_codec63/*.cu) $(wildcard reference_codec63/*.h)
 
 YUV_FILE=/mnt/sdcard/cipr/foreman.yuv
 COMP_FRAMES?=10

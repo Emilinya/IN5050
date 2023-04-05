@@ -1,35 +1,43 @@
-# Acknowledgement: Functionality for creating make rules of dependencies is
-# based on code presented here <http://codereview.stackexchange.com/q/11109>
+NVCC=nvcc
+ARCH=
 
-CFLAGS = -O1 -fno-tree-vectorize -Wall -Wextra -g -pg -march=armv8.2-a
-LDFLAGS = -lm
+CFLAGS = -O1 -g -pg $(ARCH)  # 
+LDFLAGS = -lm $(ARCH) # -Xcompiler -fsanitize=address # -lnvToolsExt
+CCFLAGS = $(CFLAGS) -fno-tree-vectorize -Wall -Wextra # -fsanitize=address
+CUFLAGS = $(CFLAGS) -G $(ARCH) -rdc=true # -Xcompiler -fsanitize=address
+
 # Use the compiler to generate make rules
 MFLAGS = -MMD -MP -MF
 
-SOURCES = $(wildcard *.c)
+SOURCES = $(wildcard *.c) $(wildcard *.cu)
 
-MAIN_FILES = c63enc.o c63dec.o c63pred.o
-OBJECTS = $(filter-out $(addprefix build/,$(MAIN_FILES)), $(addprefix build/,$(SOURCES:.c=.o)))
+MAIN_FILES = c63enc.c.o c63dec.c.o c63pred.c.o
+OBJECTS = $(filter-out $(addprefix build/,$(MAIN_FILES)), $(patsubst %,build/%.o,$(SOURCES)))
 
-DEPENDENCIES = $(addprefix build/.,$(SOURCES:.c=.d))
+DEPENDENCIES = $(patsubst %,build/%.d,$(SOURCES))
 
 
 .PHONY: all
 all: c63enc c63dec c63pred
 
-c63enc: build/c63enc.o $(OBJECTS)
-	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
-c63dec: build/c63dec.o $(OBJECTS)
-	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
-c63pred: build/c63dec.o $(OBJECTS)
-	$(CC) $^ -DC63_PRED $(CFLAGS) $(LDFLAGS) -o $@
+c63enc: build/c63enc.c.o $(OBJECTS)
+	$(NVCC) $^ $(CFLAGS) $(LDFLAGS) -o $@
+c63dec: build/c63dec.c.o $(OBJECTS)
+	$(NVCC) $^ $(CFLAGS) $(LDFLAGS) -o $@
+c63pred: build/c63dec.c.o $(OBJECTS)
+	$(NVCC) $^ -DC63_PRED $(CFLAGS) $(LDFLAGS) -o $@
 
-build/%.o: %.c
+build/%.cu.o: %.cu
 	@mkdir -p build
-	$(CC) $(CFLAGS) $(MFLAGS) $(patsubst build/%,build/.%,$(patsubst %.o,%.d,$@)) -c $< -o $@
+	$(NVCC) $(CUFLAGS) $(MFLAGS) $(patsubst build/%.cu.o,build/.%.cu.d,$@) -c $< -o $@
+
+build/%.c.o: %.c
+	@mkdir -p build
+	$(CC) $(CCFLAGS) $(MFLAGS) $(patsubst build/%.c.o,build/.%.c.d,$@) -c $< -o $@
 
 .PHONY: clean
 clean:
-	$(RM) c63enc c63dec c63pred build/*
+	$(RM) c63enc c63dec c63pred
+	$(RM) -r build
 
 -include $(DEPENDENCIES)
