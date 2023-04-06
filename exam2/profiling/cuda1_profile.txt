@@ -1,0 +1,371 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 32.19      3.57     3.57 38016000     0.00     0.00  idct_1d
+ 20.74      5.87     2.30  2376000     0.00     0.00  dct_quant_block_8x8
+ 16.50      7.70     1.83  2376000     0.00     0.00  dequant_idct_block_8x8
+  6.40      8.41     0.71  1188000     0.00     0.00  write_interleaved_data_MCU
+  5.59      9.03     0.62  9504000     0.00     0.00  transpose_block
+  4.96      9.58     0.55 50426090     0.00     0.00  put_bits
+  4.96     10.13     0.55 38016000     0.00     0.00  dct_1d
+  3.07     10.47     0.34  4752000     0.00     0.00  scale_block
+  1.80     10.67     0.20  2352240     0.00     0.00  mc_block_8x8
+  1.17     10.80     0.13    72000     0.00     0.08  dequantize_idct_row
+  0.99     10.91     0.11      990     0.11     0.11  c63_motion_estimate
+  0.90     11.01     0.10 14427920     0.00     0.00  put_byte
+  0.27     11.04     0.03     1000     0.03     1.39  write_frame
+  0.18     11.06     0.02    72000     0.00     0.05  dct_quantize_row
+  0.18     11.08     0.02      990     0.02     0.22  c63_motion_compensate
+  0.09     11.09     0.01                             __cudart240
+  0.00     11.09     0.00    11000     0.00     0.00  put_bytes
+  0.00     11.09     0.00     4000     0.00     0.00  write_DHT_HTS
+  0.00     11.09     0.00     3000     0.00     1.12  dct_quantize
+  0.00     11.09     0.00     3000     0.00     2.00  dequantize_idct
+  0.00     11.09     0.00     2970     0.00     0.00  me_block_8x8(int, int, unsigned char*, unsigned char*, unsigned char*, int)
+  0.00     11.09     0.00     2970     0.00     0.00  __device_stub__Z12me_block_8x8iiPhS_S_i(int, int, unsigned char*, unsigned char*, unsigned char*, int)
+  0.00     11.09     0.00     1030     0.00     0.00  free_yuv
+  0.00     11.09     0.00     1000     0.00     0.00  flush_bits
+  0.00     11.09     0.00     1000     0.00     0.00  read_yuv
+  0.00     11.09     0.00       30     0.00     0.00  create_yuv
+  0.00     11.09     0.00       21     0.00     0.00  errcheck_fopen
+  0.00     11.09     0.00       10     0.00     0.00  create_frame
+  0.00     11.09     0.00       10     0.00     0.00  destroy_frame
+  0.00     11.09     0.00       10     0.00     0.00  gpu_cleanup
+  0.00     11.09     0.00       10     0.00     0.00  gpu_init
+  0.00     11.09     0.00       10     0.00     0.00  init_c63_enc
+  0.00     11.09     0.00        1     0.00     0.00  ____nv_dummy_param_ref(void*)
+  0.00     11.09     0.00        1     0.00     0.00  ____nv_dummy_param_ref(void*)
+  0.00     11.09     0.00        1     0.00     0.00  __sti____cudaRegisterAll()
+  0.00     11.09     0.00        1     0.00     0.00  __sti____cudaRegisterAll()
+  0.00     11.09     0.00        1     0.00     0.00  __nv_cudaEntityRegisterCallback(void**)
+  0.00     11.09     0.00        1     0.00     0.00  __nv_cudaEntityRegisterCallback(void**)
+  0.00     11.09     0.00        1     0.00     0.00  __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init
+  0.00     11.09     0.00        1     0.00     0.00  __cudaRegisterLinkedBinary_50_tmpxft_00011fe4_00000000_7_motion_estimate_cpp1_ii_acd92a8d
+  0.00     11.09     0.00        1     0.00     0.00  get_cl_args
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 4 byte(s) for 0.09% of 11.09 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     99.9    0.00   11.08                 main [1]
+                0.00    6.01    3000/3000        dequantize_idct [3]
+                0.00    3.35    3000/3000        dct_quantize [7]
+                0.03    1.36    1000/1000        write_frame [9]
+                0.02    0.20     990/990         c63_motion_compensate [15]
+                0.11    0.00     990/990         c63_motion_estimate [17]
+                0.00    0.00    1010/1030        free_yuv [23]
+                0.00    0.00    1000/1000        read_yuv [24]
+                0.00    0.00      21/21          errcheck_fopen [26]
+                0.00    0.00      10/10          destroy_frame [28]
+                0.00    0.00      10/10          gpu_cleanup [29]
+                0.00    0.00      10/10          init_c63_enc [31]
+                0.00    0.00      10/30          create_yuv [25]
+                0.00    0.00      10/10          create_frame [27]
+                0.00    0.00      10/10          gpu_init [30]
+                0.00    0.00       1/1           get_cl_args [32]
+-----------------------------------------------
+                0.13    5.88   72000/72000       dequantize_idct [3]
+[2]     54.2    0.13    5.88   72000         dequantize_idct_row [2]
+                1.83    4.05 2376000/2376000     dequant_idct_block_8x8 [4]
+-----------------------------------------------
+                0.00    6.01    3000/3000        main [1]
+[3]     54.2    0.00    6.01    3000         dequantize_idct [3]
+                0.13    5.88   72000/72000       dequantize_idct_row [2]
+-----------------------------------------------
+                1.83    4.05 2376000/2376000     dequantize_idct_row [2]
+[4]     53.0    1.83    4.05 2376000         dequant_idct_block_8x8 [4]
+                3.57    0.00 38016000/38016000     idct_1d [5]
+                0.31    0.00 4752000/9504000     transpose_block [12]
+                0.17    0.00 2376000/4752000     scale_block [14]
+-----------------------------------------------
+                3.57    0.00 38016000/38016000     dequant_idct_block_8x8 [4]
+[5]     32.2    3.57    0.00 38016000         idct_1d [5]
+-----------------------------------------------
+                0.02    3.33   72000/72000       dct_quantize [7]
+[6]     30.2    0.02    3.33   72000         dct_quantize_row [6]
+                2.30    1.03 2376000/2376000     dct_quant_block_8x8 [8]
+-----------------------------------------------
+                0.00    3.35    3000/3000        main [1]
+[7]     30.2    0.00    3.35    3000         dct_quantize [7]
+                0.02    3.33   72000/72000       dct_quantize_row [6]
+-----------------------------------------------
+                2.30    1.03 2376000/2376000     dct_quantize_row [6]
+[8]     30.0    2.30    1.03 2376000         dct_quant_block_8x8 [8]
+                0.55    0.00 38016000/38016000     dct_1d [13]
+                0.31    0.00 4752000/9504000     transpose_block [12]
+                0.17    0.00 2376000/4752000     scale_block [14]
+-----------------------------------------------
+                0.03    1.36    1000/1000        main [1]
+[9]     12.5    0.03    1.36    1000         write_frame [9]
+                0.71    0.65 1188000/1188000     write_interleaved_data_MCU [10]
+                0.00    0.00   49000/14427920     put_byte [18]
+                0.00    0.00    4000/4000        write_DHT_HTS [20]
+                0.00    0.00    1000/1000        flush_bits [21]
+                0.00    0.00    3000/11000       put_bytes [22]
+-----------------------------------------------
+                0.71    0.65 1188000/1188000     write_frame [9]
+[10]    12.3    0.71    0.65 1188000         write_interleaved_data_MCU [10]
+                0.55    0.10 50426090/50426090     put_bits [11]
+-----------------------------------------------
+                0.55    0.10 50426090/50426090     write_interleaved_data_MCU [10]
+[11]     5.9    0.55    0.10 50426090         put_bits [11]
+                0.10    0.00 14373920/14427920     put_byte [18]
+-----------------------------------------------
+                0.31    0.00 4752000/9504000     dct_quant_block_8x8 [8]
+                0.31    0.00 4752000/9504000     dequant_idct_block_8x8 [4]
+[12]     5.6    0.62    0.00 9504000         transpose_block [12]
+-----------------------------------------------
+                0.55    0.00 38016000/38016000     dct_quant_block_8x8 [8]
+[13]     5.0    0.55    0.00 38016000         dct_1d [13]
+-----------------------------------------------
+                0.17    0.00 2376000/4752000     dct_quant_block_8x8 [8]
+                0.17    0.00 2376000/4752000     dequant_idct_block_8x8 [4]
+[14]     3.1    0.34    0.00 4752000         scale_block [14]
+-----------------------------------------------
+                0.02    0.20     990/990         main [1]
+[15]     2.0    0.02    0.20     990         c63_motion_compensate [15]
+                0.20    0.00 2352240/2352240     mc_block_8x8 [16]
+-----------------------------------------------
+                0.20    0.00 2352240/2352240     c63_motion_compensate [15]
+[16]     1.8    0.20    0.00 2352240         mc_block_8x8 [16]
+-----------------------------------------------
+                0.11    0.00     990/990         main [1]
+[17]     1.0    0.11    0.00     990         c63_motion_estimate [17]
+                0.00    0.00    2970/2970        me_block_8x8(int, int, unsigned char*, unsigned char*, unsigned char*, int) [418]
+-----------------------------------------------
+                0.00    0.00    1000/14427920     flush_bits [21]
+                0.00    0.00    4000/14427920     write_DHT_HTS [20]
+                0.00    0.00   49000/14427920     write_frame [9]
+                0.10    0.00 14373920/14427920     put_bits [11]
+[18]     0.9    0.10    0.00 14427920         put_byte [18]
+-----------------------------------------------
+                                                 <spontaneous>
+[19]     0.1    0.01    0.00                 __cudart240 [19]
+-----------------------------------------------
+                0.00    0.00    4000/4000        write_frame [9]
+[20]     0.0    0.00    0.00    4000         write_DHT_HTS [20]
+                0.00    0.00    4000/14427920     put_byte [18]
+                0.00    0.00    8000/11000       put_bytes [22]
+-----------------------------------------------
+                0.00    0.00    1000/1000        write_frame [9]
+[21]     0.0    0.00    0.00    1000         flush_bits [21]
+                0.00    0.00    1000/14427920     put_byte [18]
+-----------------------------------------------
+                0.00    0.00    3000/11000       write_frame [9]
+                0.00    0.00    8000/11000       write_DHT_HTS [20]
+[22]     0.0    0.00    0.00   11000         put_bytes [22]
+-----------------------------------------------
+                0.00    0.00      20/1030        destroy_frame [28]
+                0.00    0.00    1010/1030        main [1]
+[23]     0.0    0.00    0.00    1030         free_yuv [23]
+-----------------------------------------------
+                0.00    0.00    1000/1000        main [1]
+[24]     0.0    0.00    0.00    1000         read_yuv [24]
+-----------------------------------------------
+                0.00    0.00      10/30          main [1]
+                0.00    0.00      20/30          create_frame [27]
+[25]     0.0    0.00    0.00      30         create_yuv [25]
+-----------------------------------------------
+                0.00    0.00      21/21          main [1]
+[26]     0.0    0.00    0.00      21         errcheck_fopen [26]
+-----------------------------------------------
+                0.00    0.00      10/10          main [1]
+[27]     0.0    0.00    0.00      10         create_frame [27]
+                0.00    0.00      20/30          create_yuv [25]
+-----------------------------------------------
+                0.00    0.00      10/10          main [1]
+[28]     0.0    0.00    0.00      10         destroy_frame [28]
+                0.00    0.00      20/1030        free_yuv [23]
+-----------------------------------------------
+                0.00    0.00      10/10          main [1]
+[29]     0.0    0.00    0.00      10         gpu_cleanup [29]
+-----------------------------------------------
+                0.00    0.00      10/10          main [1]
+[30]     0.0    0.00    0.00      10         gpu_init [30]
+-----------------------------------------------
+                0.00    0.00      10/10          main [1]
+[31]     0.0    0.00    0.00      10         init_c63_enc [31]
+-----------------------------------------------
+                0.00    0.00       1/1           main [1]
+[32]     0.0    0.00    0.00       1         get_cl_args [32]
+-----------------------------------------------
+                0.00    0.00    2970/2970        c63_motion_estimate [17]
+[418]    0.0    0.00    0.00    2970         me_block_8x8(int, int, unsigned char*, unsigned char*, unsigned char*, int) [418]
+                0.00    0.00    2970/2970        __device_stub__Z12me_block_8x8iiPhS_S_i(int, int, unsigned char*, unsigned char*, unsigned char*, int) [419]
+-----------------------------------------------
+                0.00    0.00    2970/2970        me_block_8x8(int, int, unsigned char*, unsigned char*, unsigned char*, int) [418]
+[419]    0.0    0.00    0.00    2970         __device_stub__Z12me_block_8x8iiPhS_S_i(int, int, unsigned char*, unsigned char*, unsigned char*, int) [419]
+-----------------------------------------------
+                0.00    0.00       1/1           __cudaRegisterLinkedBinary_50_tmpxft_00011fe4_00000000_7_motion_estimate_cpp1_ii_acd92a8d [427]
+[420]    0.0    0.00    0.00       1         ____nv_dummy_param_ref(void*) [420]
+-----------------------------------------------
+                0.00    0.00       1/1           __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init [426]
+[421]    0.0    0.00    0.00       1         ____nv_dummy_param_ref(void*) [421]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [1602]
+[422]    0.0    0.00    0.00       1         __sti____cudaRegisterAll() [422]
+                0.00    0.00       1/1           __cudaRegisterLinkedBinary_50_tmpxft_00011fe4_00000000_7_motion_estimate_cpp1_ii_acd92a8d [427]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [1602]
+[423]    0.0    0.00    0.00       1         __sti____cudaRegisterAll() [423]
+                0.00    0.00       1/1           __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init [426]
+-----------------------------------------------
+                0.00    0.00       1/1           __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init [426]
+[424]    0.0    0.00    0.00       1         __nv_cudaEntityRegisterCallback(void**) [424]
+-----------------------------------------------
+                0.00    0.00       1/1           __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init [426]
+[425]    0.0    0.00    0.00       1         __nv_cudaEntityRegisterCallback(void**) [425]
+-----------------------------------------------
+                0.00    0.00       1/1           __sti____cudaRegisterAll() [423]
+[426]    0.0    0.00    0.00       1         __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init [426]
+                0.00    0.00       1/1           ____nv_dummy_param_ref(void*) [421]
+                0.00    0.00       1/1           __nv_cudaEntityRegisterCallback(void**) [425]
+                0.00    0.00       1/1           __nv_cudaEntityRegisterCallback(void**) [424]
+-----------------------------------------------
+                0.00    0.00       1/1           __sti____cudaRegisterAll() [422]
+[427]    0.0    0.00    0.00       1         __cudaRegisterLinkedBinary_50_tmpxft_00011fe4_00000000_7_motion_estimate_cpp1_ii_acd92a8d [427]
+                0.00    0.00       1/1           ____nv_dummy_param_ref(void*) [420]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+ [418] me_block_8x8(int, int, unsigned char*, unsigned char*, unsigned char*, int) [25] create_yuv [30] gpu_init
+ [419] __device_stub__Z12me_block_8x8iiPhS_S_i(int, int, unsigned char*, unsigned char*, unsigned char*, int) [13] dct_1d (cosine_transform.c) [5] idct_1d (cosine_transform.c)
+ [420] ____nv_dummy_param_ref(void*) (host_runtime.h) [8] dct_quant_block_8x8 [31] init_c63_enc
+ [421] ____nv_dummy_param_ref(void*) (host_runtime.h) [7] dct_quantize [16] mc_block_8x8 (motion_estimate.c)
+ [422] __sti____cudaRegisterAll() (tmpxft_00011fe4_00000000-6_motion_estimate.cudafe1.stub.c) [6] dct_quantize_row [11] put_bits
+ [423] __sti____cudaRegisterAll() (tmpxft_00011ad0_00000000-6_gpu_utils.cudafe1.stub.c) [4] dequant_idct_block_8x8 [18] put_byte
+ [424] __nv_cudaEntityRegisterCallback(void**) (tmpxft_00011fe4_00000000-6_motion_estimate.cudafe1.stub.c) [3] dequantize_idct [22] put_bytes
+ [425] __nv_cudaEntityRegisterCallback(void**) (tmpxft_00011ad0_00000000-6_gpu_utils.cudafe1.stub.c) [2] dequantize_idct_row [24] read_yuv
+ [426] __cudaRegisterLinkedBinary_44_tmpxft_00011ad0_00000000_7_gpu_utils_cpp1_ii_gpu_init [28] destroy_frame [14] scale_block (cosine_transform.c)
+ [427] __cudaRegisterLinkedBinary_50_tmpxft_00011fe4_00000000_7_motion_estimate_cpp1_ii_acd92a8d [26] errcheck_fopen [12] transpose_block (cosine_transform.c)
+  [19] __cudart240            [21] flush_bits             [20] write_DHT_HTS (c63_write.c)
+  [15] c63_motion_compensate  [23] free_yuv                [9] write_frame
+  [17] c63_motion_estimate    [32] get_cl_args            [10] write_interleaved_data_MCU (c63_write.c)
+  [27] create_frame           [29] gpu_cleanup

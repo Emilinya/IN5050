@@ -12,88 +12,68 @@
 #include "motion_estimate.h"
 #include "utils.h"
 
-__global__ void sad_block_8x8(
-    uint8_t *block1, uint8_t *block2, int top,
-    int left, int stride, uint16_t *sad_grid)
-{
-    uint8_t *my_block2 = block2 + (left + threadIdx.x) + (top + threadIdx.y) * stride;
-
-    uint16_t abssum = 0;
-    for (int v = 0; v < 8; ++v)
-    {
-        for (int u = 0; u < 8; ++u)
-        {
-            abssum += abs(block1[u + v*stride] - my_block2[u + v*stride]);
-        }
-    }
-    sad_grid[threadIdx.x + threadIdx.y * blockDim.x] = abssum;
-}
-
 /* Motion estimation for 8x8 block */
-__host__ static void me_block_8x8(
-    struct c63_common *cm, uint16_t* sad_grid, int mb_x, int mb_y,
-    uint8_t *orig, uint8_t *ref, int color_component)
+__global__ void me_block_8x8(
+    int w, int h, uint8_t* mv_vecs, uint8_t *orig, uint8_t *ref, int color_component)
 {
-    struct macroblock *mb =
-        &cm->curframe->mbs[color_component][mb_y * cm->padw[color_component] / 8 + mb_x];
+    int mb_x = blockIdx.x;
+    int mb_y = blockIdx.y;
 
-    int range = cm->me_search_range;
+    int range = blockDim.x / 2;
 
-    /* Quarter resolution for chroma channels. */
-    if (color_component > 0)
-    {
-        range /= 2;
-    }
-
-    int w = cm->padw[color_component];
-    int h = cm->padh[color_component];
-
-    /* Make sure we are within bounds of reference frame. TODO: Support partial
-       frame bounds. */
+    // Make sure we are within bounds of reference frame. TODO: Support partial frame bounds.
     int left = MAX(mb_x * 8 - range, 0);
     int top = MAX(mb_y * 8 - range, 0);
     int right = MIN(mb_x * 8 + range, w - 8);
     int bottom = MIN(mb_y * 8 + range, h - 8);
 
+    int bounds_w = right - left;
+    int bounds_h = bottom - top;
+
     int mx = mb_x * 8;
     int my = mb_y * 8;
-    uint8_t *origin = orig + my * w + mx;
-    
-    // define block and thread size
-    dim3 block_grid;
-    block_grid.x = 1;
-    block_grid.y = 1;
 
-    dim3 thread_grid;
-    thread_grid.x = right - left;
-    thread_grid.y = bottom - top;
+    // I would like not to hardcode this, but oh well 
+    __shared__ uint16_t sad_grid[32 * 32];
+
+    if (threadIdx.x < bounds_w && threadIdx.y < bounds_h) {
+        uint8_t *origin = orig + mx + my * w;
+        uint8_t *reference = ref + (left + threadIdx.x) + (top + threadIdx.y) * w;
     
-    // sad_block_8x8 <<<block_grid, thread_grid>>> (origin, ref, top, left, w, sad_grid);
-    // cudaDeviceSynchronize();
- 
-    int best_sad = INT_MAX;
-    for (int y = top; y < bottom; ++y)
-    {
-        for (int x = left; x < right; ++x)
+        uint16_t abssum = 0;
+        for (int v = 0; v < 8; ++v)
         {
-            int i = x-left + (y-top) * thread_grid.x;
-            if (sad_grid[i] < best_sad)
+            for (int u = 0; u < 8; ++u)
             {
-                mb->mv_x = x - mx;
-                mb->mv_y = y - my;
-                best_sad = sad_grid[i];
+                abssum += abs(origin[u + v*w] - reference[u + v*w]);
+            }
+        }
+        sad_grid[threadIdx.x + threadIdx.y * bounds_w] = abssum;
+    }
+    
+    __syncthreads();
+
+    if (threadIdx.x == 0 && threadIdx.y == 0) {
+        int idx = 2 * (blockIdx.x + blockIdx.y * gridDim.x);
+        int best_sad = INT_MAX;
+        for (int y = 0; y < bounds_h; ++y)
+        {
+            for (int x = 0; x < bounds_w; ++x)
+            {
+                int i = x + y * bounds_w;
+                if (sad_grid[i] < best_sad)
+                {
+                    mv_vecs[idx] = left + x - mx;
+                    mv_vecs[idx + 1] = top + y - my;
+                    best_sad = sad_grid[i];
+                }
             }
         }
     }
-
-    mb->use_mv = 1;
 }
 
 __host__ void c63_motion_estimate(struct c63_common *cm, struct gpu_frame *gpu_frame)
 {
-    /* Compare this frame with previous reconstructed frame */
-    int mb_x, mb_y;
-
     // copy data to gpu
     memcpy(gpu_frame->input->Y, cm->curframe->orig->Y, cm->ypw * cm->yph);
     memcpy(gpu_frame->input->U, cm->curframe->orig->U, cm->upw * cm->uph);
@@ -103,39 +83,85 @@ __host__ void c63_motion_estimate(struct c63_common *cm, struct gpu_frame *gpu_f
     memcpy(gpu_frame->reference->U, cm->ref_recons->U, cm->upw * cm->uph);
     memcpy(gpu_frame->reference->V, cm->ref_recons->V, cm->vpw * cm->vph);
 
-    // create array for sad values
-    uint16_t *sad_grid;
-    cudaMallocManaged(
-        (void **)&sad_grid,
-        4 * cm->me_search_range * cm->me_search_range * sizeof(uint16_t));
+    // define block grid
+    dim3 block_grid_Y;
+    dim3 block_grid_UV;
+    block_grid_Y.x = cm->mb_cols;
+    block_grid_Y.y = cm->mb_rows;
+    block_grid_UV.x = cm->mb_cols / 2;
+    block_grid_UV.y = cm->mb_rows / 2;
+    
+    // define thread grid
+    dim3 thread_grid_Y;
+    dim3 thread_grid_UV;
+    thread_grid_Y.x = cm->me_search_range * 2;
+    thread_grid_Y.y = cm->me_search_range * 2;
+    thread_grid_UV.x = cm->me_search_range;
+    thread_grid_UV.y = cm->me_search_range;
 
-    for (int i = 0; i < 4 * cm->me_search_range * cm->me_search_range; i++) {
-        sad_grid[i] = 0;
-    }
+    // create array for motion vectors
+    uint8_t *mv_vecs;
+    cudaMallocManaged((void **)&mv_vecs, 2 * block_grid_Y.x * block_grid_Y.y);
 
-    /* Luma */
-    for (mb_y = 0; mb_y < cm->mb_rows; ++mb_y)
+    // Luma
+    me_block_8x8 <<<block_grid_Y, thread_grid_Y>>> (
+        cm->padw[Y_COMPONENT], cm->padh[Y_COMPONENT], mv_vecs,
+        gpu_frame->input->Y, gpu_frame->reference->Y, Y_COMPONENT);
+    cudaDeviceSynchronize();
+
+    for (int mb_y = 0; mb_y < block_grid_Y.y; ++mb_y)
     {
-        for (mb_x = 0; mb_x < cm->mb_cols; ++mb_x)
+        for (int mb_x = 0; mb_x < block_grid_Y.x; ++mb_x)
         {
-            me_block_8x8(
-                cm, sad_grid, mb_x, mb_y, gpu_frame->input->Y,
-                gpu_frame->reference->Y, Y_COMPONENT);
+            int idx = 2 * (mb_x + mb_y * block_grid_Y.x);
+            struct macroblock *mb =
+                &cm->curframe->mbs[Y_COMPONENT][mb_y * cm->padw[Y_COMPONENT] / 8 + mb_x];
+
+            mb->mv_x = mv_vecs[idx];
+            mb->mv_y = mv_vecs[idx + 1];
+            mb->use_mv = 1;
         }
     }
 
-    /* Chroma */
-    for (mb_y = 0; mb_y < cm->mb_rows / 2; ++mb_y)
+    // Chroma U
+    me_block_8x8 <<<block_grid_UV, thread_grid_UV>>> (
+        cm->padw[U_COMPONENT], cm->padh[U_COMPONENT], mv_vecs,
+        gpu_frame->input->U, gpu_frame->reference->U, U_COMPONENT);
+    cudaDeviceSynchronize();
+
+    for (int mb_y = 0; mb_y < block_grid_UV.y; ++mb_y)
     {
-        for (mb_x = 0; mb_x < cm->mb_cols / 2; ++mb_x)
+        for (int mb_x = 0; mb_x < block_grid_UV.x; ++mb_x)
         {
-            me_block_8x8(
-                cm, sad_grid, mb_x, mb_y, gpu_frame->input->U,
-                gpu_frame->reference->U, U_COMPONENT);
-            me_block_8x8(
-                cm, sad_grid, mb_x, mb_y, gpu_frame->input->V,
-                gpu_frame->reference->V, V_COMPONENT);
+            int idx = 2 * (mb_x + mb_y * block_grid_UV.x);
+            struct macroblock *mb =
+                &cm->curframe->mbs[U_COMPONENT][mb_y * cm->padw[U_COMPONENT] / 8 + mb_x];
+
+            mb->mv_x = mv_vecs[idx];
+            mb->mv_y = mv_vecs[idx + 1];
+            mb->use_mv = 1;
         }
     }
-    cudaFree(sad_grid);
+
+    // Chroma V
+    me_block_8x8 <<<block_grid_UV, thread_grid_UV>>> (
+        cm->padw[V_COMPONENT], cm->padh[V_COMPONENT], mv_vecs,
+        gpu_frame->input->V, gpu_frame->reference->V, V_COMPONENT);
+    cudaDeviceSynchronize();
+
+    for (int mb_y = 0; mb_y < block_grid_UV.y; ++mb_y)
+    {
+        for (int mb_x = 0; mb_x < block_grid_UV.x; ++mb_x)
+        {
+            int idx = 2 * (mb_x + mb_y * block_grid_UV.x);
+            struct macroblock *mb =
+                &cm->curframe->mbs[V_COMPONENT][mb_y * cm->padw[V_COMPONENT] / 8 + mb_x];
+
+            mb->mv_x = mv_vecs[idx];
+            mb->mv_y = mv_vecs[idx + 1];
+            mb->use_mv = 1;
+        }
+    }
+
+    cudaFree(mv_vecs);
 }
