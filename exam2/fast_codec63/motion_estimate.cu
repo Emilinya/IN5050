@@ -31,55 +31,33 @@ __global__ void me_block_8x8(
     int bounds_h = bottom - top;
     int size = bounds_w * bounds_h;
 
-    int tid = threadIdx.x + threadIdx.y * blockDim.x;
+    int tid = threadIdx.x + threadIdx.y * bounds_w;
 
     int mx = mb_x * 8;
     int my = mb_y * 8;
 
-    uint8_t *origin = orig + mx + my * w;
-    uint8_t *reference = ref + left + top * w;
-    int ref_idx = threadIdx.x + threadIdx.y * w;
-
-    // copy origin into fast shared memory
-    __shared__ uint8_t temp_orig[8 * 8];
-    if (threadIdx.x < 8 && threadIdx.y < 8) {
-        temp_orig[threadIdx.x + threadIdx.y * 8] = origin[ref_idx];
-    }
-    
-    // we access (bounds_w + 7) * (bounds_h + 7) items from ref.
-    // When copying over to temp_ref, we might not have enough threads,
-    // so we copy in multiple moves
-    __shared__ uint8_t temp_ref[(32+7) * (32+7)];
-    int temp_ref_w = bounds_w + 7;
-    int temp_ref_h = bounds_h + 7;
-    
-    int shifted_tid = tid;
-    int remaining = temp_ref_w * temp_ref_h;
-    while (remaining > 0) {
-        if (tid < remaining) {
-            int y = shifted_tid / temp_ref_w;
-            int x = shifted_tid - y * temp_ref_w;
-            temp_ref[shifted_tid] = reference[x + y * w];
-        }
-        remaining -= blockDim.x * blockDim.y;
-        shifted_tid += blockDim.x * blockDim.y;
-    }
-    __syncthreads();
-    
+    // I would like not to hardcode this, but oh well 
     __shared__ uint16_t sad_grid[32 * 32];
-    if (threadIdx.x < bounds_w && threadIdx.y < bounds_h) {
-        int ref_id = threadIdx.x + threadIdx.y * temp_ref_w;
 
+    if (threadIdx.x < bounds_w && threadIdx.y < bounds_h) {
+        uint8_t *origin = orig + mx + my * w;
+        uint8_t *reference = ref + (left + threadIdx.x) + (top + threadIdx.y) * w;
+    
         uint16_t abssum = 0;
         for (int v = 0; v < 8; ++v)
         {
-            for (int u = 0; u < 8; ++u)
-            {
-                abssum += abs(temp_orig[u + v * 8] - temp_ref[ref_id + u + v * temp_ref_w]);
-            }
+            abssum += abs(origin[0 + v * w] - reference[0 + v * w]);
+            abssum += abs(origin[1 + v * w] - reference[1 + v * w]);
+            abssum += abs(origin[2 + v * w] - reference[2 + v * w]);
+            abssum += abs(origin[3 + v * w] - reference[3 + v * w]);
+            abssum += abs(origin[4 + v * w] - reference[4 + v * w]);
+            abssum += abs(origin[5 + v * w] - reference[5 + v * w]);
+            abssum += abs(origin[6 + v * w] - reference[6 + v * w]);
+            abssum += abs(origin[7 + v * w] - reference[7 + v * w]);
         }
-        sad_grid[threadIdx.x + threadIdx.y * bounds_w] = abssum;
+        sad_grid[tid] = abssum;
     }
+    
     __syncthreads();
 
     // optimal reduction number is sqrt(size) - set reduction number
@@ -101,6 +79,7 @@ __global__ void me_block_8x8(
         }
         best_i_list[tid] = best_i;
     }
+
     __syncthreads();
 
     if (tid == 0) {
