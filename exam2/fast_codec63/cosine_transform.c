@@ -4,205 +4,96 @@
 
 #include "cosine_transform.h"
 #include "tables.h"
+#include "utils.h"
 
-static void transpose_block(float *in_data, float *out_data)
+void dequant_idct_block_8x8(
+  int x, int y, int w, int16_t *in_data,
+  uint8_t *prediction, uint8_t *out_data, uint8_t *quant_tbl)
 {
-  int i, j;
+  int i, j, v;
 
-  for (i = 0; i < 8; ++i)
+  float mb[8 * 8] __attribute((aligned(16)));
+  float mb2[8 * 8] __attribute((aligned(16)));
+
+  int idx = x * 8 + y * 8 * w;
+  int16_t *in = in_data + idx + 7 * x * 8;
+  uint8_t *pred = prediction + idx;
+  uint8_t *out = out_data + idx;
+
+  // input
+  for (i = 0; i < 64; ++i)
   {
-    for (j = 0; j < 8; ++j)
-    {
-      out_data[i * 8 + j] = in_data[j * 8 + i];
-    }
+    mb[i] = in[i];
   }
-}
 
-static void dct_1d(float *in_data, float *out_data)
-{
-  int i, j;
-
-  for (i = 0; i < 8; ++i)
+  // dequantize
+  for (i = 0; i < 64; ++i)
   {
-    float dct = 0;
+    uint8_t u = zigzag_U[i];
+    uint8_t v = zigzag_V[i];
 
-    for (j = 0; j < 8; ++j)
-    {
-      dct += in_data[j] * dctlookup[j][i];
-    }
-
-    out_data[i] = dct;
-  }
-}
-
-static void idct_1d(float *in_data, float *out_data)
-{
-  int i, j;
-
-  for (i = 0; i < 8; ++i)
-  {
-    float idct = 0;
-
-    for (j = 0; j < 8; ++j)
-    {
-      idct += in_data[j] * dctlookup[i][j];
-    }
-
-    out_data[i] = idct;
-  }
-}
-
-static void scale_block(float *in_data, float *out_data)
-{
-  int u, v;
-
-  for (v = 0; v < 8; ++v)
-  {
-    for (u = 0; u < 8; ++u)
-    {
-      float a1 = !u ? ISQRT2 : 1.0f;
-      float a2 = !v ? ISQRT2 : 1.0f;
-
-      /* Scale according to normalizing function */
-      out_data[v * 8 + u] = in_data[v * 8 + u] * a1 * a2;
-    }
-  }
-}
-
-static void quantize_block(float *in_data, float *out_data, uint8_t *quant_tbl)
-{
-  int zigzag;
-
-  for (zigzag = 0; zigzag < 64; ++zigzag)
-  {
-    uint8_t u = zigzag_U[zigzag];
-    uint8_t v = zigzag_V[zigzag];
-
-    float dct = in_data[v * 8 + u];
-
-    /* Zig-zag and quantize */
-    out_data[zigzag] = (float)round((dct / 4.0) / quant_tbl[zigzag]);
-  }
-}
-
-static void dequantize_block(float *in_data, float *out_data,
-                             uint8_t *quant_tbl)
-{
-  int zigzag;
-
-  for (zigzag = 0; zigzag < 64; ++zigzag)
-  {
-    uint8_t u = zigzag_U[zigzag];
-    uint8_t v = zigzag_V[zigzag];
-
-    float dct = in_data[zigzag];
+    float dct = mb[i];
 
     /* Zig-zag and de-quantize */
-    out_data[v * 8 + u] = (float)round((dct * quant_tbl[zigzag]) / 4.0);
-  }
-}
-
-void dct_quant_block_8x8(int16_t *in_data, int16_t *out_data,
-                         uint8_t *quant_tbl)
-{
-  float mb[8 * 8] __attribute((aligned(16)));
-  float mb2[8 * 8] __attribute((aligned(16)));
-
-  int i, v;
-
-  for (i = 0; i < 64; ++i)
-  {
-    mb2[i] = in_data[i];
+    mb2[v * 8 + u] = (float)round((dct * quant_tbl[i]) / 4.0);
   }
 
-  /* Two 1D DCT operations with transpose */
-  for (v = 0; v < 8; ++v)
+  // scale
+  for (i = 0; i < 8; ++i)
   {
-    dct_1d(mb2 + v * 8, mb + v * 8);
-  }
-  transpose_block(mb, mb2);
-  for (v = 0; v < 8; ++v)
-  {
-    dct_1d(mb2 + v * 8, mb + v * 8);
-  }
-  transpose_block(mb, mb2);
-
-  scale_block(mb2, mb);
-  quantize_block(mb, mb2, quant_tbl);
-
-  for (i = 0; i < 64; ++i)
-  {
-    out_data[i] = mb2[i];
-  }
-}
-
-void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
-                            uint8_t *quant_tbl)
-{
-  float mb[8 * 8] __attribute((aligned(16)));
-  float mb2[8 * 8] __attribute((aligned(16)));
-
-  int i, v;
-
-  for (i = 0; i < 64; ++i)
-  {
-    mb[i] = in_data[i];
-  }
-
-  dequantize_block(mb, mb2, quant_tbl);
-  scale_block(mb2, mb);
-
-  /* Two 1D inverse DCT operations with transpose */
-  for (v = 0; v < 8; ++v)
-  {
-    idct_1d(mb + v * 8, mb2 + v * 8);
-  }
-  transpose_block(mb2, mb);
-  for (v = 0; v < 8; ++v)
-  {
-    idct_1d(mb + v * 8, mb2 + v * 8);
-  }
-  transpose_block(mb2, mb);
-
-  for (i = 0; i < 64; ++i)
-  {
-    out_data[i] = mb[i];
-  }
-}
-
-void dequantize_idct_row(int16_t *in_data, uint8_t *prediction, int w, int h,
-                         int y, uint8_t *out_data, uint8_t *quantization)
-{
-  int x;
-
-  int16_t block[8 * 8];
-
-  /* Perform the dequantization and iDCT */
-  for (x = 0; x < w; x += 8)
-  {
-    int i, j;
-
-    dequant_idct_block_8x8(in_data + (x * 8), block, quantization);
-
-    for (i = 0; i < 8; ++i)
+    for (j = 0; j < 8; ++j)
     {
-      for (j = 0; j < 8; ++j)
+      float a1 = !j ? ISQRT2 : 1.0f;
+      float a2 = !i ? ISQRT2 : 1.0f;
+
+      /* Scale according to normalizing function */
+      mb[i * 8 + j] = mb2[i * 8 + j] * a1 * a2;
+    }
+  }
+
+  // idct rows
+  for (i = 0; i < 8; ++i)
+  {
+    for (j = 0; j < 8; ++j)
+    {
+      float idct = 0;
+
+      for (v = 0; v < 8; ++v)
       {
-        /* Add prediction block. Note: DCT is not precise -
-           Clamp to legal values */
-        int16_t tmp = block[i * 8 + j] + (int16_t)prediction[i * w + j + x];
-
-        if (tmp < 0)
-        {
-          tmp = 0;
-        }
-        else if (tmp > 255)
-        {
-          tmp = 255;
-        }
-
-        out_data[i * w + j + x] = tmp;
+        idct += mb[i * 8 + v] * dctlookup[j][v];
       }
+
+      // set data column vise - transpose block
+      mb2[i + j * 8] = idct;
+    }
+  }
+
+  // idct columns
+  for (i = 0; i < 8; ++i)
+  {
+    for (j = 0; j < 8; ++j)
+    {
+      float idct = 0;
+
+      for (v = 0; v < 8; ++v)
+      {
+        idct += mb2[i * 8 + v] * dctlookup[j][v];
+      }
+
+      // set data column vise - transpose block again
+      mb[i + j * 8] = idct;
+    }
+  }
+
+  // output
+  for (i = 0; i < 8; ++i)
+  {
+    for (j = 0; j < 8; ++j)
+    {
+      int16_t tmp = (int16_t)mb[i * 8 + j] + pred[i * w + j];
+
+      // DCT is not precise - Clamp to legal values
+      out[i * w + j] = MAX(MIN(tmp, 255), 0);
     }
   }
 }
@@ -210,50 +101,124 @@ void dequantize_idct_row(int16_t *in_data, uint8_t *prediction, int w, int h,
 void dequantize_idct(int16_t *in_data, uint8_t *prediction, uint32_t width,
                      uint32_t height, uint8_t *out_data, uint8_t *quantization)
 {
-  int y;
+  int x, y;
 
-  for (y = 0; y < height; y += 8)
+  int ho8 = height / 8; // "height over 8"
+  int wo8 = width / 8;  // "width over 8"
+
+  for (y = 0; y < ho8; ++y)
   {
-    dequantize_idct_row(in_data + y * width, prediction + y * width, width, height, y,
-                        out_data + y * width, quantization);
+    for (x = 0; x < wo8; ++x)
+    {
+      dequant_idct_block_8x8(x, y, width, in_data, prediction, out_data, quantization);
+    }
   }
 }
 
-void dct_quantize_row(uint8_t *in_data, uint8_t *prediction, int w, int h,
-                      int16_t *out_data, uint8_t *quantization)
+
+void dct_quant_block_8x8(
+    int x, int y, int w, uint8_t *in_data,
+    uint8_t *prediction, int16_t *out_data, uint8_t *quant_tbl)
 {
-  int x;
+  int i, j, v;
 
-  int16_t block[8 * 8];
+  int idx = (x + y * w) * 8;
+  uint8_t *in = in_data + idx;
+  uint8_t *pred = prediction + idx;
+  int16_t *out = out_data + idx + x * 56;
 
-  /* Perform the DCT and quantization */
-  for (x = 0; x < w; x += 8)
+  /* Store MBs linear in memory, i.e. the 64 coefficients are stored
+     continous. This allows us to ignore stride in DCT/iDCT and other
+     functions. */
+  float mb[8 * 8] __attribute((aligned(16)));
+  float mb2[8 * 8] __attribute((aligned(16)));
+
+  // input
+  for (i = 0; i < 8; ++i)
   {
-    int i, j;
-
-    for (i = 0; i < 8; ++i)
+    for (j = 0; j < 8; ++j)
     {
-      for (j = 0; j < 8; ++j)
-      {
-        block[i * 8 + j] = ((int16_t)in_data[i * w + j + x] - prediction[i * w + j + x]);
-      }
+      mb[i * 8 + j] = in[i * w + j] - pred[i * w + j];
     }
+  }
 
-    /* Store MBs linear in memory, i.e. the 64 coefficients are stored
-       continous. This allows us to ignore stride in DCT/iDCT and other
-       functions. */
-    dct_quant_block_8x8(block, out_data + (x * 8), quantization);
+  // dct rows
+  for (i = 0; i < 8; ++i)
+  {
+    for (j = 0; j < 8; ++j)
+    {
+      float dct = 0;
+
+      for (v = 0; v < 8; ++v)
+      {
+        dct += mb[i * 8 + v] * dctlookup[v][j];
+      }
+
+      // set data column vise - transpose block
+      mb2[i + j * 8] = dct;
+    }
+  }
+
+  // dct columns
+  for (i = 0; i < 8; ++i)
+  {
+    for (j = 0; j < 8; ++j)
+    {
+      float dct = 0;
+
+      for (v = 0; v < 8; ++v)
+      {
+        dct += mb2[i * 8 + v] * dctlookup[v][j];
+      }
+
+      // set data column vise - transpose block again
+      mb[i + j * 8] = dct;
+    }
+  }
+
+  // scale
+  for (i = 0; i < 8; ++i)
+  {
+    for (j = 0; j < 8; ++j)
+    {
+      float a1 = !j ? ISQRT2 : 1.0f;
+      float a2 = !i ? ISQRT2 : 1.0f;
+
+      /* Scale according to normalizing function */
+      mb2[i * 8 + j] = mb[i * 8 + j] * a1 * a2;
+    }
+  }
+
+  // quantize
+  for (int i = 0; i < 64; ++i)
+  {
+    uint8_t u = zigzag_U[i];
+    uint8_t v = zigzag_V[i];
+
+    float dct = mb2[v * 8 + u];
+
+    /* Zig-zag and quantize */
+    mb[i] = (float)round((dct / 4.0) / quant_tbl[i]);
+  }
+
+  // output
+  for (i = 0; i < 64; ++i)
+  {
+    out[i] = mb[i];
   }
 }
 
 void dct_quantize(uint8_t *in_data, uint8_t *prediction, uint32_t width,
                   uint32_t height, int16_t *out_data, uint8_t *quantization)
 {
-  int y;
+  int ho8 = height / 8; // "height over 8"
+  int wo8 = width / 8;  // "width over 8"
 
-  for (y = 0; y < height; y += 8)
+  for (int y = 0; y < ho8; ++y)
   {
-    dct_quantize_row(in_data + y * width, prediction + y * width, width, height,
-                     out_data + y * width, quantization);
+    for (int x = 0; x < wo8; ++x)
+    {
+      dct_quant_block_8x8(x, y, width, in_data, prediction, out_data, quantization);
+    }
   }
 }
