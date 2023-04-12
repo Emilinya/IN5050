@@ -97,7 +97,10 @@ struct c63_common
 
   int me_search_range;
 
-  uint8_t quanttbl[COLOR_COMPONENTS][64];
+  uint8_t *quanttbl[COLOR_COMPONENTS];
+  float *dctlookup;
+  uint8_t *zigzag_U;
+  uint8_t *zigzag_V;
 
   yuv_t *ref_recons;        // Reconstructed image from previous frame
   struct frame *curframe;

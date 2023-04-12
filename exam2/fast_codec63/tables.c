@@ -194,7 +194,7 @@ uint16_t MVVLC[8] = {0, 2, 3, 4, 5, 6, 14, 30};
 
 uint8_t MVVLC_Size[8] = {2, 3, 3, 3, 3, 3, 4, 5};
 
-uint8_t zigzag_U[64] =
+uint8_t zigzag_U_table[64] =
 {
   0,
   1, 0,
@@ -213,7 +213,7 @@ uint8_t zigzag_U[64] =
   7,
 };
 
-uint8_t zigzag_V[64] =
+uint8_t zigzag_V_table[64] =
 {
   0,
   0, 1,
@@ -232,7 +232,7 @@ uint8_t zigzag_V[64] =
   7,
 };
 
-float dctlookup[8][8] =
+float dct_lookup_table[8][8] =
 {
   {1.0f,  0.980785f,  0.923880f,  0.831470f,  0.707107f,  0.555570f,  0.382683f,  0.195090f, },
   {1.0f,  0.831470f,  0.382683f, -0.195090f, -0.707107f, -0.980785f, -0.923880f, -0.555570f, },

@@ -7,16 +7,16 @@
 // cudaMalloc with error checking
 #define cudaMallocErr(ptr, size) \
     do { \
-        cudaError_t __cudaCalloc_err = cudaMallocManaged(ptr, size); \
+        cudaError_t __cudaCalloc_err = cudaMallocManaged((void **)&ptr, size); \
         if (__cudaCalloc_err != cudaSuccess) fprintf(stderr, "Error when mallocing!"); \
     } while (0)
 
 // there is no cudaCalloc, so I define one myself
 #define cudaCallocErr(ptr, nmemb, size) \
     do { \
-        cudaError_t __cudaCalloc_err = cudaMallocManaged(ptr, nmemb*size); \
+        cudaError_t __cudaCalloc_err = cudaMallocManaged((void **)&ptr, nmemb*size); \
         if (__cudaCalloc_err == cudaSuccess) { \
-            cudaMemset(*ptr, 0, nmemb*size); \
+            cudaMemset((void *)ptr, 0, nmemb*size); \
          } else { \
             fprintf(stderr, "Error when callocing!"); \
          } \
@@ -39,7 +39,10 @@ extern "C"
     void free_yuv(yuv_t *image);
 
     struct frame *create_frame(struct c63_common *cm);
-    void destroy_frame(struct frame *f);
+    void free_frame(struct frame *f);
+
+    void init_tables(struct c63_common *cm);
+    void free_tables(struct c63_common *cm);
 #ifdef __cplusplus
 }
 #endif

@@ -40,14 +40,6 @@ struct c63_common *init_c63_enc(int width, int height)
   cm->me_search_range = 16;    // Pixels in every direction
   cm->keyframe_interval = 100; // Distance between keyframes
 
-  /* Initialize quantization tables */
-  for (int i = 0; i < 64; ++i)
-  {
-    cm->quanttbl[Y_COMPONENT][i] = yquanttbl_def[i] / (cm->qp / 10.0);
-    cm->quanttbl[U_COMPONENT][i] = uvquanttbl_def[i] / (cm->qp / 10.0);
-    cm->quanttbl[V_COMPONENT][i] = uvquanttbl_def[i] / (cm->qp / 10.0);
-  }
-
   return cm;
 }
 
@@ -75,24 +67,21 @@ static void c63_encode_image(struct c63_common *cm)
 
   /* DCT and Quantization */
   dct_quantize(cm->curframe->orig->Y, cm->curframe->predicted->Y, cm->ypw,
-               cm->yph, cm->curframe->residuals->Ydct,
-               cm->quanttbl[Y_COMPONENT]);
+               cm->yph, cm->curframe->residuals->Ydct, cm->quanttbl[Y_COMPONENT], cm);
 
-  dct_quantize(cm->curframe->orig->U, cm->curframe->predicted->U, cm->padw[U_COMPONENT],
-               cm->uph, cm->curframe->residuals->Udct,
-               cm->quanttbl[U_COMPONENT]);
+  dct_quantize(cm->curframe->orig->U, cm->curframe->predicted->U, cm->upw,
+               cm->uph, cm->curframe->residuals->Udct, cm->quanttbl[U_COMPONENT], cm);
 
   dct_quantize(cm->curframe->orig->V, cm->curframe->predicted->V, cm->vpw,
-               cm->vph, cm->curframe->residuals->Vdct,
-               cm->quanttbl[V_COMPONENT]);
+               cm->vph, cm->curframe->residuals->Vdct, cm->quanttbl[V_COMPONENT], cm);
 
   /* Reconstruct frame for inter-prediction */
   dequantize_idct(cm->curframe->residuals->Ydct, cm->curframe->predicted->Y,
-                  cm->ypw, cm->yph, cm->curframe->recons->Y, cm->quanttbl[Y_COMPONENT]);
+                  cm->ypw, cm->yph, cm->curframe->recons->Y, cm->quanttbl[Y_COMPONENT], cm);
   dequantize_idct(cm->curframe->residuals->Udct, cm->curframe->predicted->U,
-                  cm->upw, cm->uph, cm->curframe->recons->U, cm->quanttbl[U_COMPONENT]);
+                  cm->upw, cm->uph, cm->curframe->recons->U, cm->quanttbl[U_COMPONENT], cm);
   dequantize_idct(cm->curframe->residuals->Vdct, cm->curframe->predicted->V,
-                  cm->vpw, cm->vph, cm->curframe->recons->V, cm->quanttbl[V_COMPONENT]);
+                  cm->vpw, cm->vph, cm->curframe->recons->V, cm->quanttbl[V_COMPONENT], cm);
 
   /* Function dump_image(), found in utils.c, can be used here to check if the
      prediction is correct */
@@ -128,6 +117,7 @@ int main(int argc, char **argv)
     FILE *outfile = errcheck_fopen(args->output_file, "wb");
 
     struct c63_common *cm = init_c63_enc(args->width, args->height);
+    init_tables(cm);
     cm->e_ctx.fp = outfile;
     cm->curframe = create_frame(cm);
     cm->ref_recons = create_yuv(cm);
@@ -176,8 +166,9 @@ int main(int argc, char **argv)
       runtimes[i] = time;
     }
 
-    destroy_frame(cm->curframe);
+    free_frame(cm->curframe);
     free_yuv(cm->ref_recons);
+    free_tables(cm);
     free(cm);
 
     fclose(outfile);
