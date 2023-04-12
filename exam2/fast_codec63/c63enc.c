@@ -12,7 +12,6 @@
 #include "utils.h"
 #include "tables.h"
 #include "cl_utils.h"
-#include "gpu_utils.h"
 #include "c63_write.h"
 #include "motion_estimate.h"
 #include "cosine_transform.h"
@@ -52,7 +51,7 @@ struct c63_common *init_c63_enc(int width, int height)
   return cm;
 }
 
-static void c63_encode_image(struct c63_common *cm, struct gpu_frame *gpu_frame)
+static void c63_encode_image(struct c63_common *cm)
 {
   /* Check if keyframe */
   if (cm->framenum == 0 || cm->frames_since_keyframe == cm->keyframe_interval)
@@ -68,7 +67,7 @@ static void c63_encode_image(struct c63_common *cm, struct gpu_frame *gpu_frame)
   if (!cm->curframe->keyframe)
   {
     /* Motion Estimation */
-    c63_motion_estimate(cm, gpu_frame);
+    c63_motion_estimate(cm);
 
     /* Motion Compensation */
     c63_motion_compensate(cm);
@@ -133,8 +132,6 @@ int main(int argc, char **argv)
     cm->curframe = create_frame(cm);
     cm->ref_recons = create_yuv(cm);
 
-    struct gpu_frame *gpu_frame = gpu_init(cm);
-
     char *input_file = argv[optind];
     FILE *infile = errcheck_fopen(input_file, "rb");
 
@@ -154,7 +151,7 @@ int main(int argc, char **argv)
 
       printf("\rEncoding frame %d", numframes);
       fflush(stdout);
-      c63_encode_image(cm, gpu_frame);
+      c63_encode_image(cm);
 
       free_yuv(image);
 
@@ -179,7 +176,6 @@ int main(int argc, char **argv)
       runtimes[i] = time;
     }
 
-    gpu_cleanup(gpu_frame);
     destroy_frame(cm->curframe);
     free_yuv(cm->ref_recons);
     free(cm);

@@ -7,7 +7,7 @@
 extern "C"
 {
 #endif
-    void c63_motion_estimate(struct c63_common *cm, struct gpu_frame *gpu_frame);
+    void c63_motion_estimate(struct c63_common *cm);
 #ifdef __cplusplus
 }
 #endif

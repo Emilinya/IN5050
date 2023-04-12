@@ -14,7 +14,7 @@
 
 /* Motion estimation for 8x8 block */
 __global__ void me_block_8x8(
-    int w, int h, uint8_t* mv_vecs, uint8_t *orig, uint8_t *ref, int color_component)
+    int w, int h, uint8_t *orig, uint8_t *ref, struct macroblock *mbs)
 {
     int mb_x = blockIdx.x;
     int mb_y = blockIdx.y;
@@ -83,8 +83,6 @@ __global__ void me_block_8x8(
     __syncthreads();
 
     if (tid == 0) {
-        int idx = 2 * (blockIdx.x + blockIdx.y * gridDim.x);
-
         int best_i = best_i_list[0];
         for (int i = 1; i < reduction_num; ++i)
         {
@@ -94,22 +92,15 @@ __global__ void me_block_8x8(
             }
         }
 
-        mv_vecs[idx] = left + (best_i % bounds_w) - mx;
-        mv_vecs[idx + 1] = top + (best_i / bounds_w) - my;
+        struct macroblock *mb = &mbs[mb_x + mb_y * w / 8];
+        mb->mv_x = left + (best_i % bounds_w) - mx;
+        mb->mv_y = top + (best_i / bounds_w) - my;
+        mb->use_mv = 1;
     }
 }
 
-__host__ void c63_motion_estimate(struct c63_common *cm, struct gpu_frame *gpu_frame)
+__host__ void c63_motion_estimate(struct c63_common *cm)
 {
-    // copy data to gpu
-    memcpy(gpu_frame->input->Y, cm->curframe->orig->Y, cm->ypw * cm->yph);
-    memcpy(gpu_frame->input->U, cm->curframe->orig->U, cm->upw * cm->uph);
-    memcpy(gpu_frame->input->V, cm->curframe->orig->V, cm->vpw * cm->vph);
-
-    memcpy(gpu_frame->reference->Y, cm->ref_recons->Y, cm->ypw * cm->yph);
-    memcpy(gpu_frame->reference->U, cm->ref_recons->U, cm->upw * cm->uph);
-    memcpy(gpu_frame->reference->V, cm->ref_recons->V, cm->vpw * cm->vph);
-
     // define block grid
     dim3 block_grid_Y;
     dim3 block_grid_UV;
@@ -126,69 +117,24 @@ __host__ void c63_motion_estimate(struct c63_common *cm, struct gpu_frame *gpu_f
     thread_grid_UV.x = cm->me_search_range;
     thread_grid_UV.y = cm->me_search_range;
 
-    // create array for motion vectors
-    uint8_t *mv_vecs;
-    cudaMallocManaged((void **)&mv_vecs, 2 * block_grid_Y.x * block_grid_Y.y);
-
     // Luma
     me_block_8x8 <<<block_grid_Y, thread_grid_Y>>> (
-        cm->padw[Y_COMPONENT], cm->padh[Y_COMPONENT], mv_vecs,
-        gpu_frame->input->Y, gpu_frame->reference->Y, Y_COMPONENT);
+        cm->padw[Y_COMPONENT], cm->padh[Y_COMPONENT],
+        cm->curframe->orig->Y, cm->ref_recons->Y,
+        cm->curframe->mbs[Y_COMPONENT]);
     cudaDeviceSynchronize();
-
-    for (int mb_y = 0; mb_y < block_grid_Y.y; ++mb_y)
-    {
-        for (int mb_x = 0; mb_x < block_grid_Y.x; ++mb_x)
-        {
-            int idx = 2 * (mb_x + mb_y * block_grid_Y.x);
-            struct macroblock *mb =
-                &cm->curframe->mbs[Y_COMPONENT][mb_y * cm->padw[Y_COMPONENT] / 8 + mb_x];
-
-            mb->mv_x = mv_vecs[idx];
-            mb->mv_y = mv_vecs[idx + 1];
-            mb->use_mv = 1;
-        }
-    }
 
     // Chroma U
     me_block_8x8 <<<block_grid_UV, thread_grid_UV>>> (
-        cm->padw[U_COMPONENT], cm->padh[U_COMPONENT], mv_vecs,
-        gpu_frame->input->U, gpu_frame->reference->U, U_COMPONENT);
+        cm->padw[U_COMPONENT], cm->padh[U_COMPONENT],
+        cm->curframe->orig->U, cm->ref_recons->U,
+        cm->curframe->mbs[U_COMPONENT]);
     cudaDeviceSynchronize();
-
-    for (int mb_y = 0; mb_y < block_grid_UV.y; ++mb_y)
-    {
-        for (int mb_x = 0; mb_x < block_grid_UV.x; ++mb_x)
-        {
-            int idx = 2 * (mb_x + mb_y * block_grid_UV.x);
-            struct macroblock *mb =
-                &cm->curframe->mbs[U_COMPONENT][mb_y * cm->padw[U_COMPONENT] / 8 + mb_x];
-
-            mb->mv_x = mv_vecs[idx];
-            mb->mv_y = mv_vecs[idx + 1];
-            mb->use_mv = 1;
-        }
-    }
 
     // Chroma V
     me_block_8x8 <<<block_grid_UV, thread_grid_UV>>> (
-        cm->padw[V_COMPONENT], cm->padh[V_COMPONENT], mv_vecs,
-        gpu_frame->input->V, gpu_frame->reference->V, V_COMPONENT);
+        cm->padw[V_COMPONENT], cm->padh[V_COMPONENT],
+        cm->curframe->orig->V, cm->ref_recons->V,
+        cm->curframe->mbs[V_COMPONENT]);
     cudaDeviceSynchronize();
-
-    for (int mb_y = 0; mb_y < block_grid_UV.y; ++mb_y)
-    {
-        for (int mb_x = 0; mb_x < block_grid_UV.x; ++mb_x)
-        {
-            int idx = 2 * (mb_x + mb_y * block_grid_UV.x);
-            struct macroblock *mb =
-                &cm->curframe->mbs[V_COMPONENT][mb_y * cm->padw[V_COMPONENT] / 8 + mb_x];
-
-            mb->mv_x = mv_vecs[idx];
-            mb->mv_y = mv_vecs[idx + 1];
-            mb->use_mv = 1;
-        }
-    }
-
-    cudaFree(mv_vecs);
 }
