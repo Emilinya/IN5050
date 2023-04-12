@@ -21,7 +21,7 @@ __global__ void me_block_8x8(
 
     int range = blockDim.x / 2;
 
-    // Make sure we are within bounds of reference frame. TODO: Support partial frame bounds.
+    // make sure we are within bounds of reference frame. TODO: Support partial frame bounds.
     int left = MAX(mb_x * 8 - range, 0);
     int top = MAX(mb_y * 8 - range, 0);
     int right = MIN(mb_x * 8 + range, w - 8);
@@ -102,39 +102,39 @@ __global__ void me_block_8x8(
 __host__ void c63_motion_estimate(struct c63_common *cm)
 {
     // define block grid
-    dim3 block_grid_Y;
-    dim3 block_grid_UV;
-    block_grid_Y.x = cm->mb_cols;
-    block_grid_Y.y = cm->mb_rows;
-    block_grid_UV.x = cm->mb_cols / 2;
-    block_grid_UV.y = cm->mb_rows / 2;
+    dim3 block_grid_Y(cm->mb_cols, cm->mb_rows, 1);
+    dim3 block_grid_UV(cm->mb_cols / 2, cm->mb_rows / 2, 1);
     
     // define thread grid
-    dim3 thread_grid_Y;
-    dim3 thread_grid_UV;
-    thread_grid_Y.x = cm->me_search_range * 2;
-    thread_grid_Y.y = cm->me_search_range * 2;
-    thread_grid_UV.x = cm->me_search_range;
-    thread_grid_UV.y = cm->me_search_range;
+    dim3 thread_grid_Y(cm->me_search_range * 2, cm->me_search_range * 2, 1);
+    dim3 thread_grid_UV(cm->me_search_range, cm->me_search_range, 1);
+
+    // define streams
+    cudaStream_t Ystream, Ustream, Vstream;
+    cudaStreamCreate(&Ystream);
+    cudaStreamCreate(&Ustream);
+    cudaStreamCreate(&Vstream);
+
+    // TODO: do something to properly use streams
 
     // Luma
-    me_block_8x8 <<<block_grid_Y, thread_grid_Y>>> (
+    me_block_8x8 <<<block_grid_Y, thread_grid_Y, 0, Ystream>>> (
         cm->padw[Y_COMPONENT], cm->padh[Y_COMPONENT],
         cm->curframe->orig->Y, cm->ref_recons->Y,
         cm->curframe->mbs[Y_COMPONENT]);
-    cudaDeviceSynchronize();
-
+    cudaStreamSynchronize(Ystream);
+        
     // Chroma U
-    me_block_8x8 <<<block_grid_UV, thread_grid_UV>>> (
+    me_block_8x8 <<<block_grid_UV, thread_grid_UV, 0, Ustream>>> (
         cm->padw[U_COMPONENT], cm->padh[U_COMPONENT],
         cm->curframe->orig->U, cm->ref_recons->U,
         cm->curframe->mbs[U_COMPONENT]);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(Ustream);
 
     // Chroma V
-    me_block_8x8 <<<block_grid_UV, thread_grid_UV>>> (
+    me_block_8x8 <<<block_grid_UV, thread_grid_UV, 0, Vstream>>> (
         cm->padw[V_COMPONENT], cm->padh[V_COMPONENT],
         cm->curframe->orig->V, cm->ref_recons->V,
         cm->curframe->mbs[V_COMPONENT]);
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(Vstream);
 }

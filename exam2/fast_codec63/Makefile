@@ -1,10 +1,12 @@
 NVCC=nvcc
-ARCH=
 
-CFLAGS = -O1 -g -pg $(ARCH)  # 
-LDFLAGS = -lm $(ARCH) # -Xcompiler -fsanitize=address # -lnvToolsExt
-CCFLAGS = $(CFLAGS) -fno-tree-vectorize -Wall -Wextra # -fsanitize=address
-CUFLAGS = $(CFLAGS) -G $(ARCH) -rdc=true # -Xcompiler -fsanitize=address
+CPUARCH=-march=armv8.2-a
+GPUARCH=-arch=compute_72 -code=compute_72
+
+CFLAGS = -O1 -g -pg
+LDFLAGS = -lm $(GPUARCH) -Xcompiler $(CPUARCH) # -fsanitize=address # -lnvToolsExt
+CCFLAGS = $(CFLAGS) $(CPUARCH) -fno-tree-vectorize -Wall -Wextra # -fsanitize=address
+CUFLAGS = $(CFLAGS) $(GPUARCH) -G -rdc=true -Xcompiler $(CPUARCH) # -fsanitize=address
 
 # Use the compiler to generate make rules
 MFLAGS = -MMD -MP -MF

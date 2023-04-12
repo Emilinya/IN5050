@@ -142,15 +142,9 @@ __host__ void dequantize_idct(
   int16_t *in_data, uint8_t *prediction, uint32_t width, uint32_t height,
   uint8_t *out_data, uint8_t *quantization, struct c63_common *cm)
 {
-  // define block grid
-  dim3 block_grid;
-  block_grid.x = width / 8;
-  block_grid.y = height / 8;
-    
-  // define thread grid
-  dim3 thread_grid;
-  thread_grid.x = 8;
-  thread_grid.y = 8;
+  // define block and thread grid
+  dim3 block_grid(width / 8, height / 8, 1);
+  dim3 thread_grid(8, 8, 1);
 
   dequant_idct_block_8x8 <<<block_grid, thread_grid>>> (
     width, in_data, prediction, out_data, quantization,
