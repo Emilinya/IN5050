@@ -46,31 +46,14 @@ __global__ void me_block_8x8(
         uint16_t abssum = 0;
         for (int v = 0; v < 8; ++v)
         {
-            uint32_t a = 
-                (origin[v * w] << 24) | (origin[v * w + 1] << 16)
-                | (origin[v * w + 2] << 8)  | origin[v * w + 3];
-            uint32_t b =
-                (reference[v * w] << 24) | (reference[v * w + 1] << 16)
-                | (reference[v * w + 2] << 8)  | reference[v * w + 3];
-            uint32_t res = __vabsdiffu4(a, b);
-
-            abssum += (res & (255u << 24)) >> 24;
-            abssum += (res & (255u << 16)) >> 16;
-            abssum += (res & (255u << 8)) >> 8;
-            abssum += res & 255u;
-
-            a = 
-                (origin[v * w + 4] << 24) | (origin[v * w + 5] << 16)
-                | (origin[v * w + 6] << 8)  | origin[v * w + 7];
-            b =
-                (reference[v * w + 4] << 24) | (reference[v * w + 5] << 16)
-                | (reference[v * w + 6] << 8)  | reference[v * w + 7];
-            res = __vabsdiffu4(a, b);
-
-            abssum += (res & (255u << 24)) >> 24;
-            abssum += (res & (255u << 16)) >> 16;
-            abssum += (res & (255u << 8)) >> 8;
-            abssum += res & 255u;
+            abssum += abs(origin[0 + v * w] - reference[0 + v * w]);
+            abssum += abs(origin[1 + v * w] - reference[1 + v * w]);
+            abssum += abs(origin[2 + v * w] - reference[2 + v * w]);
+            abssum += abs(origin[3 + v * w] - reference[3 + v * w]);
+            abssum += abs(origin[4 + v * w] - reference[4 + v * w]);
+            abssum += abs(origin[5 + v * w] - reference[5 + v * w]);
+            abssum += abs(origin[6 + v * w] - reference[6 + v * w]);
+            abssum += abs(origin[7 + v * w] - reference[7 + v * w]);
         }
         sad_grid[tid] = abssum;
     }
@@ -140,7 +123,6 @@ __host__ void c63_motion_estimate(struct c63_common *cm)
         cm->curframe->orig->Y, cm->ref_recons->Y,
         cm->curframe->mbs[Y_COMPONENT]);
     cudaStreamSynchronize(Ystream);
-    // exit(1);
         
     // Chroma U
     me_block_8x8 <<<block_grid_UV, thread_grid_UV, 0, Ustream>>> (
