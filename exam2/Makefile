@@ -9,9 +9,9 @@ PREV_FRAMES=$(shell cat test/fc.txt)
 test: test/fast_foreman.c63 test/reference_foreman.c63
 	@diff test/fast_foreman.c63 test/reference_foreman.c63; \
 	if [ $$? -eq 0 ]; then \
-            echo "\033[0;32mFast decoder still works\033[0m"; \
+            echo "\033[0;32mFast encoder still works\033[0m"; \
     else \
-            echo "\033[0;31mYou have broken the decoder!\033[0m"; \
+            echo "\033[0;31mYou have broken the encoder!\033[0m"; \
     fi
 	@rm test/fast_foreman.c63 test/reference_foreman.c63;
 

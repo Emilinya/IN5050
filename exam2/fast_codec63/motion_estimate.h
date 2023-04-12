@@ -2,7 +2,6 @@
 
 #include "c63.h"
 
-// Declaration
 #ifdef __cplusplus
 extern "C"
 {
