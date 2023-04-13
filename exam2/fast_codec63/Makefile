@@ -3,7 +3,7 @@ NVCC=nvcc
 CPUARCH=-march=armv8.2-a
 GPUARCH=-arch=compute_72 -code=compute_72
 
-CFLAGS = -O1 -g -pg
+CFLAGS = -O1 -g
 LDFLAGS = -lm $(GPUARCH) -Xcompiler $(CPUARCH) # -fsanitize=address # -lnvToolsExt
 CCFLAGS = $(CFLAGS) $(CPUARCH) -fno-tree-vectorize -Wall -Wextra # -fsanitize=address
 CUFLAGS = $(CFLAGS) $(GPUARCH) -G -rdc=true -Xcompiler $(CPUARCH) # -fsanitize=address
