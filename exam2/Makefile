@@ -22,6 +22,19 @@ profile: fast_codec63/c63enc
 	rm profiled_fast_foreman.c63
 	rm gmon.out
 
+.PHONY: ncu_profile
+ncu_profile:
+	nsys profile fast_codec63/c63enc -w 352 -h 288 -f 10 -o profiled_fast_foreman.c63 $(YUV_FILE)
+	sudo /opt/nvidia/nsight-compute/2022.2.1/ncu -f -o profile fast_codec63/c63enc -w 352 -h 288 -f 10 -o profiled_fast_foreman.c63 $(YUV_FILE)
+	rm -f profiled_fast_foreman.c63
+
+.PHONY: pred
+pred: fast_codec63/c63enc
+	fast_codec63/c63enc -w 352 -h 288 -f 10 -o test/fast_foreman.c63 /mnt/sdcard/cipr/foreman.yuv
+	-reference_codec63/c63pred test/fast_foreman.c63 test/foreman.yuv
+	python3 test/yuv2png.py
+	rm test/fast_foreman.c63 test/foreman.yuv test/foreman_f0.png
+
 test/fast_foreman.c63: fast_codec63/c63enc
 	fast_codec63/c63enc -w 352 -h 288 -f $(COMP_FRAMES) -o test/fast_foreman.c63 $(YUV_FILE)
 
