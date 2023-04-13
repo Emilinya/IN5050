@@ -14,12 +14,38 @@
 
 /* Motion estimation for 8x8 block */
 __global__ void me_block_8x8(
-    int w, int h, uint8_t *orig, uint8_t *ref, struct macroblock *mbs)
+    int *ws, int *hs, yuv_t *origs,
+    yuv_t *refs, struct macroblock *mbss[COLOR_COMPONENTS])
 {
+    // find out which color component we are
+    int w = ws[blockIdx.z];
+    int h = hs[blockIdx.z];
+    struct macroblock *mbs = mbss[blockIdx.z];
+
+    uint8_t *orig, *ref;
+    if (blockIdx.z == 0) {
+        orig = origs->Y;
+        ref = refs->Y;
+    } else if (blockIdx.z == 1) {
+        orig = origs->U;
+        ref = refs->U;
+    } else {
+        orig = origs->V;
+        ref = refs->V;
+    }
+
     int mb_x = blockIdx.x;
     int mb_y = blockIdx.y;
 
     int range = blockDim.x / 2;
+    if (blockIdx.z != 0) {
+        range /= 2;
+
+        // gridDim is too large for U and V components
+        if (!(mb_x < gridDim.x / 2 && mb_y < gridDim.y / 2)) {
+            return;
+        }
+    }
 
     // make sure we are within bounds of reference frame. TODO: Support partial frame bounds.
     int left = MAX(mb_x * 8 - range, 0);
@@ -56,8 +82,10 @@ __global__ void me_block_8x8(
             abssum += abs(origin[7 + v * w] - reference[7 + v * w]);
         }
         sad_grid[tid] = abssum;
+    } else {
+        return;
     }
-    
+
     __syncthreads();
 
     // optimal reduction number is sqrt(size) - set reduction number
@@ -91,50 +119,40 @@ __global__ void me_block_8x8(
                 best_i = best_i_list[i];
             }
         }
-
+        
         struct macroblock *mb = &mbs[mb_x + mb_y * w / 8];
         mb->mv_x = left + (best_i % bounds_w) - mx;
         mb->mv_y = top + (best_i / bounds_w) - my;
         mb->use_mv = 1;
+
+        // if (blockIdx.x == 5 && blockIdx.y == 5 && blockIdx.z == 0 && threadIdx.x == 0 && threadIdx.y == 0) {
+        //     printf("%d, %d, %d, %d, %d\n", size, best_i, sad_grid[best_i], mb->mv_x, mb->mv_y);
+        // }
     }
 }
 
 __host__ void c63_motion_estimate(struct c63_common *cm)
 {
     // define block grid
-    dim3 block_grid_Y(cm->mb_cols, cm->mb_rows, 1);
-    dim3 block_grid_UV(cm->mb_cols / 2, cm->mb_rows / 2, 1);
+    dim3 block_grid(cm->mb_cols, cm->mb_rows, 3);
     
     // define thread grid
-    dim3 thread_grid_Y(cm->me_search_range * 2, cm->me_search_range * 2, 1);
-    dim3 thread_grid_UV(cm->me_search_range, cm->me_search_range, 1);
+    int range = cm->me_search_range * 2;
+    dim3 thread_grid(range, range, 1);
 
-    // define streams
-    cudaStream_t Ystream, Ustream, Vstream;
-    cudaStreamCreate(&Ystream);
-    cudaStreamCreate(&Ustream);
-    cudaStreamCreate(&Vstream);
+    // is this really neccesary?
+    int *ws, *hs;
+    cudaMallocErr(ws, 3*sizeof(int));
+    cudaMallocErr(hs, 3*sizeof(int));
 
-    // TODO: do something to properly use streams
+    memcpy(ws, cm->padw, 3*sizeof(int));
+    memcpy(hs, cm->padh, 3*sizeof(int));
 
-    // Luma
-    me_block_8x8 <<<block_grid_Y, thread_grid_Y, 0, Ystream>>> (
-        cm->ypw, cm->yph,
-        cm->curframe->orig->Y, cm->ref_recons->Y,
-        cm->curframe->mbs[Y_COMPONENT]);
-    cudaStreamSynchronize(Ystream);
-        
-    // Chroma U
-    me_block_8x8 <<<block_grid_UV, thread_grid_UV, 0, Ustream>>> (
-        cm->upw, cm->uph,
-        cm->curframe->orig->U, cm->ref_recons->U,
-        cm->curframe->mbs[U_COMPONENT]);
-    cudaStreamSynchronize(Ustream);
+    // printf("\n");
+    me_block_8x8 <<<block_grid, thread_grid>>> (
+        ws, hs, cm->curframe->orig, cm->ref_recons, cm->curframe->mbs);
+    cudaDeviceSynchronize();
 
-    // Chroma V
-    me_block_8x8 <<<block_grid_UV, thread_grid_UV, 0, Vstream>>> (
-        cm->vpw, cm->vph,
-        cm->curframe->orig->V, cm->ref_recons->V,
-        cm->curframe->mbs[V_COMPONENT]);
-    cudaStreamSynchronize(Vstream);
+    cudaFree(ws);
+    cudaFree(hs);
 }
