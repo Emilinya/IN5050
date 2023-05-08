@@ -9,12 +9,14 @@ TEGRA_CMD="c63server"
 TEGRA_ARGS=""
 
 PC_CMD="c63enc"
-PC_ARGS="/opt/Media/foreman.yuv -o output -w 352 -h 288 -f 10"
+PC_ARGS="/opt/Media/foreman.yuv -o output.c63 -w 352 -h 288 -f 10"
 
 SRC_DIR="$(realpath $(dirname $0))"
 DATE=$(date -u +%Y%m%d-%H%M%S)
 RSYNC_ARGS="-rt --exclude=logs/ --exclude=.*"
 BUILD_DIR="in5050-codec63-build"
+
+RUNS=1
 
 trap quit INT
 
@@ -57,6 +59,8 @@ while [ $# -gt 0 ] ; do
             TEGRA_ARGS="$PC_ARGS"
             PC_ARGS="$T"
             ;;
+        --repeat)
+            RUNS=$1
     esac
 done
 
@@ -100,10 +104,27 @@ echo
 
 #Launch on both nodes
 echo "### Running ###"
-echo
-stdbuf -oL -eL ssh $TEGRA "cd $BUILD_DIR/tegra-build && time stdbuf -oL -eL ./$TEGRA_CMD -r $PC_NODE $TEGRA_ARGS; echo Tegra exit code: \$?" |& tee logs/$DATE-tegra.log &
-stdbuf -oL -eL ssh $PC "cd $BUILD_DIR/x86-build && time stdbuf -oL -eL ./$PC_CMD -r $TEGRA_NODE $PC_ARGS; echo PC exit code: \$?" |& tee logs/$DATE-pc.log &
 
-wait
+if [ $RUNS -eq 1 ]; then
+    stdbuf -oL -eL ssh $TEGRA "cd $BUILD_DIR/tegra-build && time stdbuf -oL -eL ./$TEGRA_CMD -r $PC_NODE $TEGRA_ARGS; echo Tegra exit code: \$?" |& tee logs/$DATE-tegra.log &
+    stdbuf -oL -eL ssh $PC "cd $BUILD_DIR/x86-build && time stdbuf -oL -eL ./$PC_CMD -r $TEGRA_NODE $PC_ARGS; echo PC exit code: \$?" |& tee logs/$DATE-pc.log &
+    wait
+else
+    for i in $(seq $RUNS)
+    do
+        START=`date +%s.%N`
+        ssh $TEGRA "cd $BUILD_DIR/tegra-build && ./$TEGRA_CMD -r $PC_NODE $TEGRA_ARGS" &> /dev/null &
+        ssh $PC "cd $BUILD_DIR/x86-build && ./$PC_CMD -r $TEGRA_NODE $PC_ARGS" &> /dev/null &
+
+        wait
+        END=`date +%s.%N`
+
+        RUNTIME=$( echo "$END - $START" | bc -l )
+        echo $i/$RUNS: $RUNTIME s
+        echo $RUNTIME >> "../profiling/temp.txt"
+    done
+    python3 ../profiling/process.py ../profiling/temp.txt
+    rm ../profiling/temp.txt
+fi
 
 quit

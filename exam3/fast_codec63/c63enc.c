@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include <sisci_error.h>
 #include <sisci_api.h>
@@ -110,133 +109,69 @@ int main(int argc, char **argv)
 {
   cl_args_t *args = get_cl_args(argc, argv);
 
-  if (args->run_count)
-  {
-    printf("Running encoder to %d times.\n", args->run_count);
-  }
   if (args->frame_limit)
   {
     printf("Limited to %d frames.\n", args->frame_limit);
   }
 
-  double *runtimes = calloc(args->run_count, sizeof(double));
-  int num_runs = 1;
-  if (args->run_count)
+  FILE *outfile = errcheck_fopen(args->output_file, "wb");
+
+  struct c63_common *cm = init_c63_enc(args->width, args->height);
+  cm->e_ctx.fp = outfile;
+  cm->curframe = create_frame(cm);
+  cm->ref_recons = create_yuv(cm);
+
+  char *input_file = argv[optind];
+  FILE *infile = errcheck_fopen(input_file, "rb");
+
+  sci_desc_t sd;
+  sci_error_t error;
+
+  SCIInitialize(0, &error);
+  if (error != SCI_ERR_OK)
   {
-    num_runs = args->run_count;
+    fprintf(stderr, "SCIInitialize failed: %s\n", SCIGetErrorString(error));
+    exit(EXIT_FAILURE);
   }
 
-  for (int i = 0; i < num_runs; i++)
+  /* Encode input frames */
+  int numframes = 0;
+  while (1)
   {
-    FILE *outfile = errcheck_fopen(args->output_file, "wb");
-
-    struct c63_common *cm = init_c63_enc(args->width, args->height);
-    cm->e_ctx.fp = outfile;
-    cm->curframe = create_frame(cm);
-    cm->ref_recons = create_yuv(cm);
-
-    char *input_file = argv[optind];
-    FILE *infile = errcheck_fopen(input_file, "rb");
-
-    sci_desc_t sd;
-    sci_error_t error;
-
-    SCIInitialize(0, &error);
-    if (error != SCI_ERR_OK)
+    yuv_t *image = read_yuv(infile, cm);
+    if (!image)
     {
-      fprintf(stderr, "SCIInitialize failed: %s\n", SCIGetErrorString(error));
-      exit(EXIT_FAILURE);
+      break;
+    }
+    cm->curframe->orig = image;
+
+    printf("Encoding frame %d\n", numframes);
+    c63_encode_image(cm);
+
+    free_yuv(image);
+
+    ++numframes;
+
+    if (args->frame_limit && numframes >= args->frame_limit)
+    {
+      break;
     }
 
-    /* Encode input frames */
-    int numframes = 0;
-
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    while (1)
-    {
-      yuv_t *image = read_yuv(infile, cm);
-      if (!image)
-      {
-        break;
-      }
-      cm->curframe->orig = image;
-
-      printf("\rEncoding frame %d", numframes);
-      fflush(stdout);
-      c63_encode_image(cm);
-
-      free_yuv(image);
-
-      ++numframes;
-
-      if (args->frame_limit && numframes >= args->frame_limit)
-      {
-        break;
-      }
-
-      // swap frames to get ready for next frame
-      yuv_t *tmp = cm->ref_recons;
-      cm->ref_recons = cm->curframe->recons;
-      cm->curframe->recons = tmp;
-    }
-    printf("\n");
-    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-
-    if (args->run_count)
-    {
-      double time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-      runtimes[i] = time;
-    }
-
-    destroy_frame(cm->curframe);
-    free_yuv(cm->ref_recons);
-    free(cm);
-
-    fclose(outfile);
-    fclose(infile);
-
-    SCITerminate();
+    // swap frames to get ready for next frame
+    yuv_t *tmp = cm->ref_recons;
+    cm->ref_recons = cm->curframe->recons;
+    cm->curframe->recons = tmp;
   }
 
-  if (args->run_count)
-  {
-    double avg = 0;
-    double min = 1e6;
-    double max = 0;
-    for (size_t i = 0; i < args->run_count; i++)
-    {
-      avg += runtimes[i];
-      min = MIN(min, runtimes[i]);
-      max = MAX(max, runtimes[i]);
-    }
-    avg /= (double)args->run_count;
-
-    double std = 0;
-    for (size_t i = 0; i < args->run_count; i++)
-    {
-      double diff = runtimes[i] - avg;
-      std += diff * diff;
-    }
-    std = sqrt(std) / (double)args->run_count;
-
-    FILE *perf_file = errcheck_fopen("profiling/runtimes.txt", "w");
-    fprintf(
-        perf_file, "Runtime data from %d runs. Each run encoded %d frames of a %dx%d video.\n",
-        args->run_count, args->frame_limit, args->width, args->height);
-    fprintf(perf_file, "avg ± std [s] | min [s] | max [s]\n");
-    fprintf(perf_file, "%f ± %f | %f | %f\n", avg, std, min, max);
-    fprintf(perf_file, "\nData:\n");
-    for (size_t i = 0; i < args->run_count - 1; i++)
-    {
-      fprintf(perf_file, "%f ", runtimes[i]);
-    }
-    fprintf(perf_file, "%f\n", runtimes[args->run_count - 1]);
-    fclose(perf_file);
-  }
-
-  free(runtimes);
+  destroy_frame(cm->curframe);
+  free_yuv(cm->ref_recons);
   free(args);
+  free(cm);
+
+  fclose(outfile);
+  fclose(infile);
+
+  SCITerminate();
 
   return EXIT_SUCCESS;
 }

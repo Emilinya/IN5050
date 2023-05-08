@@ -12,7 +12,6 @@ void print_usage(const char *exec)
     printf("  -o                             Output file (.c63)\n");
     printf("  -r                             Node id of server\n");
     printf("  [-f]                           Limit number of frames to encode\n");
-    printf("  [-p]                           Run encoder multiple times to profile it\n");
     printf("\n");
 
     exit(EXIT_FAILURE);
@@ -27,7 +26,7 @@ cl_args_t *get_cl_args(int argc, char **argv)
 
     int c;
     cl_args_t *args = calloc(1, sizeof(cl_args_t));
-    while ((c = getopt(argc, argv, "h:w:o:r:f:p:i")) != -1)
+    while ((c = getopt(argc, argv, "h:w:o:r:f:i")) != -1)
     {
         switch (c)
         {
@@ -42,9 +41,6 @@ cl_args_t *get_cl_args(int argc, char **argv)
             break;
         case 'f':
             args->frame_limit = atoi(optarg);
-            break;
-        case 'p':
-            args->run_count = atoi(optarg);
             break;
         case 'r':
             args->remote_node = atoi(optarg);
