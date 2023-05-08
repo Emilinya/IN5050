@@ -1,5 +1,4 @@
-#ifndef C63_C63_H_
-#define C63_C63_H_
+#pragma once
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -7,10 +6,6 @@
 
 #define MAX_FILELENGTH 200
 #define DEFAULT_OUTPUT_FILE "a.mjpg"
-
-#define ISQRT2 0.70710678118654f
-#define PI 3.14159265358979
-#define ILOG2 1.442695040888963 // 1/log(2);
 
 #define COLOR_COMPONENTS 3
 
@@ -40,9 +35,6 @@
 
 #define HUFF_AC_ZERO 16
 #define HUFF_AC_SIZE 11
-
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 struct yuv
 {
@@ -95,13 +87,13 @@ struct c63_common
 
   int mb_cols, mb_rows;
 
-  uint8_t qp;                         // Quality parameter
+  uint8_t qp;               // Quality parameter
 
   int me_search_range;
 
   uint8_t quanttbl[COLOR_COMPONENTS][64];
 
-  struct frame *refframe;
+  yuv_t *ref_recons;        // Reconstructed image from previous frame
   struct frame *curframe;
 
   int framenum;
@@ -111,5 +103,3 @@ struct c63_common
 
   struct entropy_ctx e_ctx;
 };
-
-#endif  /* C63_C63_H_ */

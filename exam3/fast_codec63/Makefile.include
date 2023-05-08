@@ -4,9 +4,10 @@
 DIS_HOME := /opt/DIS
 CU_HOME  := /usr/local/cuda
 
-SOURCES = $(wildcard *.c)
-# Add dot prefix to hide files.
-OBJECTS = $(SOURCES:.c=.o)
+SOURCES = $(patsubst ../%,%,$(wildcard ../*.c))
+
+MAIN_FILES = c63enc.o c63dec.o c63pred.o c63server.o
+OBJECTS = $(filter-out $(MAIN_FILES), $(SOURCES:.c=.o))
 
 DEPENDENCIES = $(addprefix .,$(SOURCES:.c=.d))  # Add dot prefix to hide files.
 
@@ -42,13 +43,14 @@ LDLIBS   := -lsisci -lm
 	$(CC) -x c++ -std=c++11 $(CFLAGS) $(INCLUDE) -o $@ $< -c
 
 all: c63enc c63dec c63pred
-c63server: c63server.o
+c63server: c63server.o $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
-c63enc: c63enc.o dsp.o tables.o io.o c63_write.o common.o me.o
+c63enc: c63enc.o $(OBJECTS)
+	echo $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
-c63dec: c63dec.c dsp.o tables.o io.o common.o me.o
+c63dec: c63dec.c $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
-c63pred: c63dec.c dsp.o tables.o io.o common.o me.o
+c63pred: c63dec.c $(OBJECTS)
 	$(CC) $^ -DC63_PRED $(CFLAGS) $(LDFLAGS) -o $@
 clean:
 	$(RM) c63server c63enc c63dec c63pred *.o $(DEPENDENCIES)

@@ -20,11 +20,10 @@ trap quit INT
 
 function quit()
 {
-    echo "Cleaning up"
+    echo
+    echo "### Cleaning up ###"
     ssh $TEGRA "pkill -u \$(whoami) $TEGRA_CMD" &> /dev/null || true
     ssh $PC "pkill -u \$(whoami) $PC_CMD" &> /dev/null || true
-    echo "Logfiles:"
-    ls -lh logs/$DATE-*.log
 }
 
 mkdir -p logs
@@ -92,21 +91,19 @@ rsync ${RSYNC_ARGS} ${SRC_DIR}/ $PC:${BUILD_DIR}/
 #Compile on tegra and pc
 echo
 echo "### Compiling on Tegra ###"
-echo
 ssh -t $TEGRA "cd $BUILD_DIR/tegra-build && make ${CLEAN} $TEGRA_CMD" || exit $?
+echo
 
-echo
 echo "### Compiling on PC ###"
-echo
 ssh -t $PC "cd $BUILD_DIR/x86-build && make ${CLEAN} $PC_CMD" || exit $?
+echo
 
 #Launch on both nodes
-echo "Running:"
+echo "### Running ###"
+echo
 stdbuf -oL -eL ssh $TEGRA "cd $BUILD_DIR/tegra-build && time stdbuf -oL -eL ./$TEGRA_CMD -r $PC_NODE $TEGRA_ARGS; echo Tegra exit code: \$?" |& tee logs/$DATE-tegra.log &
 stdbuf -oL -eL ssh $PC "cd $BUILD_DIR/x86-build && time stdbuf -oL -eL ./$PC_CMD -r $TEGRA_NODE $PC_ARGS; echo PC exit code: \$?" |& tee logs/$DATE-pc.log &
 
-wait 
-
-echo "Done!"
+wait
 
 quit

@@ -11,6 +11,7 @@
 #include "c63_write.h"
 #include "io.h"
 #include "tables.h"
+#include "utils.h"
 
 int frequencies[2][12];
 
