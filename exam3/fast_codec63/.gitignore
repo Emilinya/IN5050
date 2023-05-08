@@ -1,0 +1,16 @@
+# object files
+c63enc
+c63dec
+c63pred
+c63server
+*.o
+
+# make files
+.*.d
+
+# data files
+*.yuv
+*.c63
+
+*.swp
+logs/*
