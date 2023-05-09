@@ -18,8 +18,8 @@ char *print_error(sci_error_t error);
     do { \
         if (error != SCI_ERR_OK) { \
             fprintf( \
-                stderr, "%s at line %d in %s failed - Got error %s\n", \
-                name, __LINE__, __FILE__, print_error(error)); \
+                stderr, "Error at line %d in %s: %s failed: %s\n", \
+                __LINE__, __FILE__, name, print_error(error)); \
             exit(EXIT_FAILURE); \
         } \
     } while (0)

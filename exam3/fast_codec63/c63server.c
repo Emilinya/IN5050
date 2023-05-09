@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
 #include "cl_utils.h"
 #include "sisci_utils.h"
 
@@ -26,7 +27,7 @@ int main(int argc, char **argv)
   volatile struct client_segment *client_segment;
 
   sisci_init(
-      1, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
+      TRUE, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
       &localSegment, &remoteSegment, &server_segment, &client_segment);
 
   // Tell client that we are done

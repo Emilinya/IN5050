@@ -4,6 +4,9 @@
 
 #include "c63.h"
 
+#define TRUE 1
+#define FALSE 0
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

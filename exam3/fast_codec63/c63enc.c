@@ -130,7 +130,7 @@ int main(int argc, char **argv)
   FILE *infile = errcheck_fopen(input_file, "rb");
 
   sisci_init(
-      0, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
+      FALSE, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
       &localSegment, &remoteSegment, &server_segment, &client_segment);
 
   /* Encode input frames */
