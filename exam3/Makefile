@@ -27,6 +27,7 @@ test:
             echo "\033[0;31mYou have broken the encoder!\033[0m"; \
     fi
 	@rm test/fast_foreman.c63 test/reference_foreman.c63;
+	@ssh -t $(PC) "rm in5050-codec63-build/x86-build/fast_foreman.c63 in5050-reference-codec63/reference_foreman.c63;"
 
 .PHONY: time
 time:

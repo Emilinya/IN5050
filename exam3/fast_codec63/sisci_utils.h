@@ -13,14 +13,13 @@ void sisci_init(
     sci_map_t *remoteMap, sci_local_segment_t *localSegment, sci_remote_segment_t *remoteSegment,
     volatile struct server_segment **server_segment, volatile struct client_segment **client_segment,
     struct c63_common *cm);
-char *print_error(sci_error_t error);
 
 #define ERR_CHECK(error, name) \
     do { \
         if (error != SCI_ERR_OK) { \
             fprintf( \
                 stderr, "Error at line %d in %s: %s failed: %s\n", \
-                __LINE__, __FILE__, name, print_error(error)); \
+                __LINE__, __FILE__, name, SCIGetErrorString(error)); \
             exit(EXIT_FAILURE); \
         } \
     } while (0)
