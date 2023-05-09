@@ -16,7 +16,8 @@ test:
 	@echo
 	@echo "### Encoding with reference ###"
 	rsync -rt reference_codec63/ $(PC):in5050-reference-codec63
-	ssh -t $(PC) "cd in5050-reference-codec63 && make c63enc && ./c63enc $(YUV_FILE) -o reference_foreman.c63 -w 352 -h 288 -f $(COMP_FRAMES)"
+	@echo "Encoding ..." 
+	@ssh -t $(PC) "cd in5050-reference-codec63 && make c63enc && ./c63enc $(YUV_FILE) -o reference_foreman.c63 -w 352 -h 288 -f $(COMP_FRAMES)" > /dev/null
 	rsync -rt $(PC):in5050-reference-codec63/reference_foreman.c63 test
 	
 	@diff test/fast_foreman.c63 test/reference_foreman.c63; \
