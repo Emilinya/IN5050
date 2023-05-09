@@ -13,6 +13,8 @@
 
 FILE *errcheck_fopen(const char *filename, const char *mode);
 
+struct c63_common *init_c63_enc(int width, int height);
+
 yuv_t *read_yuv(FILE *file, struct c63_common *cm);
 yuv_t *create_yuv(struct c63_common *cm);
 void free_yuv(yuv_t *image);

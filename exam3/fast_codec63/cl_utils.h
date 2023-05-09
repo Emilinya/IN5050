@@ -5,7 +5,7 @@
 extern int optind;
 extern char *optarg;
 
-struct encoder_cl_args
+struct cl_args
 {
     uint32_t width;
     uint32_t height;
@@ -14,16 +14,8 @@ struct encoder_cl_args
     char *output_file;
 };
 
-struct server_cl_args
-{
-    int remote_node;
-};
+typedef struct cl_args cl_args_t;
 
-typedef struct encoder_cl_args encoder_cl_args_t;
-typedef struct server_cl_args server_cl_args_t;
+void print_usage(const char *exec);
 
-void print_encoder_usage(const char *exec);
-void print_server_usage(const char *exec);
-
-encoder_cl_args_t *get_encoder_cl_args(int argc, char **argv);
-server_cl_args_t *get_server_cl_args(int argc, char **argv);
+cl_args_t *get_cl_args(int argc, char **argv);

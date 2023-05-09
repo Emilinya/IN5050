@@ -6,10 +6,10 @@ set -e
 #
 
 TEGRA_CMD="c63server"
-TEGRA_ARGS=""
+TEGRA_ARGS="/opt/Media/foreman.yuv -o output.c63 -w 352 -h 288 -f 10"
 
 PC_CMD="c63enc"
-PC_ARGS="/opt/Media/foreman.yuv -o output.c63 -w 352 -h 288 -f 10"
+PC_ARGS=$TEGRA_ARGS
 
 SRC_DIR="$(realpath $(dirname $0))"
 DATE=$(date -u +%Y%m%d-%H%M%S)

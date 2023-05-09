@@ -11,7 +11,8 @@
 void sisci_init(
     int initServer, int localAdapterNo, int remoteNodeId, sci_desc_t *sd, sci_map_t *localMap,
     sci_map_t *remoteMap, sci_local_segment_t *localSegment, sci_remote_segment_t *remoteSegment,
-    volatile struct server_segment **server_segment, volatile struct client_segment **client_segment);
+    volatile struct server_segment **server_segment, volatile struct client_segment **client_segment,
+    struct c63_common *cm);
 char *print_error(sci_error_t error);
 
 #define ERR_CHECK(error, name) \
