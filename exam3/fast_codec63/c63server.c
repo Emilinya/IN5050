@@ -8,55 +8,36 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sisci_error.h>
-#include <sisci_api.h>
-
-static uint32_t remote_node = 0;
-
-/* getopt */
-extern int optind;
-extern char *optarg;
-
-static void print_help()
-{
-  printf("Usage: ./c63server -r nodeid\n");
-  printf("Commandline options:\n");
-  printf("  -r                             Node id of client\n");
-  printf("\n");
-
-  exit(EXIT_FAILURE);
-}
-
+#include "cl_utils.h"
+#include "sisci_utils.h"
 
 int main(int argc, char **argv)
 {
-  int c;
-  sci_desc_t sd;  
-  sci_error_t error;
-  
-  if (argc == 1) { print_help(); }
+  int localAdapterNo = 0;
+  server_cl_args_t *args = get_server_cl_args(argc, argv);
 
-  while ((c = getopt(argc, argv, "h:w:o:f:i:r:")) != -1)
-  {
-    switch (c)
-    {
-      case 'r':
-        remote_node = atoi(optarg);
-        break;
-      default:
-        print_help();
-        break;
-    }
-  }
+  sci_desc_t sd;
+  sci_map_t localMap;
+  sci_map_t remoteMap;
+  sci_local_segment_t localSegment;
+  sci_remote_segment_t remoteSegment;
 
-  /* Initialize the SISCI library */
-  SCIInitialize(0, &error);
-  if (error != SCI_ERR_OK) {
-      fprintf(stderr,"SCIInitialize failed: %s\n", SCIGetErrorString(error));
-      exit(EXIT_FAILURE);
-  }
+  volatile struct server_segment *server_segment;
+  volatile struct client_segment *client_segment;
 
+  sisci_init(
+      1, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
+      &localSegment, &remoteSegment, &server_segment, &client_segment);
+
+  // Tell client that we are done
+  client_segment->packet.cmd = CMD_DONE;
+  SCIFlush(NULL, NO_FLAGS);
+
+  // wait until client is done
+  while (server_segment->packet.cmd == CMD_NULL);
 
   SCITerminate();
+  free(args);
 
+  return EXIT_SUCCESS;
 }

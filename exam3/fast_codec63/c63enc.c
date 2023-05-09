@@ -7,14 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sisci_error.h>
-#include <sisci_api.h>
-
 #include "c63.h"
 #include "utils.h"
 #include "tables.h"
 #include "cl_utils.h"
 #include "c63_write.h"
+#include "sisci_utils.h"
 #include "motion_estimate.h"
 #include "cosine_transform.h"
 
@@ -96,9 +94,6 @@ static void c63_encode_image(struct c63_common *cm)
   dequantize_idct(cm->curframe->residuals->Vdct, cm->curframe->predicted->V,
                   cm->vpw, cm->vph, cm->curframe->recons->V, cm->quanttbl[V_COMPONENT]);
 
-  /* Function dump_image(), found in utils.c, can be used here to check if the
-     prediction is correct */
-
   write_frame(cm);
 
   ++cm->framenum;
@@ -107,7 +102,17 @@ static void c63_encode_image(struct c63_common *cm)
 
 int main(int argc, char **argv)
 {
-  cl_args_t *args = get_cl_args(argc, argv);
+  int localAdapterNo = 0;
+  encoder_cl_args_t *args = get_encoder_cl_args(argc, argv);
+
+  sci_desc_t sd;
+  sci_map_t localMap;
+  sci_map_t remoteMap;
+  sci_local_segment_t localSegment;
+  sci_remote_segment_t remoteSegment;
+
+  volatile struct server_segment *server_segment;
+  volatile struct client_segment *client_segment;
 
   if (args->frame_limit)
   {
@@ -124,15 +129,9 @@ int main(int argc, char **argv)
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
 
-  sci_desc_t sd;
-  sci_error_t error;
-
-  SCIInitialize(0, &error);
-  if (error != SCI_ERR_OK)
-  {
-    fprintf(stderr, "SCIInitialize failed: %s\n", SCIGetErrorString(error));
-    exit(EXIT_FAILURE);
-  }
+  sisci_init(
+      0, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
+      &localSegment, &remoteSegment, &server_segment, &client_segment);
 
   /* Encode input frames */
   int numframes = 0;
@@ -162,6 +161,13 @@ int main(int argc, char **argv)
     cm->ref_recons = cm->curframe->recons;
     cm->curframe->recons = tmp;
   }
+
+  // tell server that we are done
+  server_segment->packet.cmd = CMD_DONE;
+  SCIFlush(NULL, NO_FLAGS);
+
+  // wait until server is done
+  while (client_segment->packet.cmd == CMD_NULL);
 
   destroy_frame(cm->curframe);
   free_yuv(cm->ref_recons);
