@@ -14,9 +14,28 @@
 #include "c63_write.h"
 #include "sisci_utils.h"
 
+static void c63_write_image(struct c63_common *cm) {
+  /* Check if keyframe */
+  if (cm->framenum == 0 || cm->frames_since_keyframe == cm->keyframe_interval)
+  {
+    cm->curframe->keyframe = 1;
+    cm->frames_since_keyframe = 0;
+  }
+  else
+  {
+    cm->curframe->keyframe = 0;
+  }
+
+  write_frame(cm);
+
+  ++cm->framenum;
+  ++cm->frames_since_keyframe;
+}
+
 int main(int argc, char **argv)
 {
-  int localAdapterNo = 0;
+  unsigned int client_interrupt_number = CLIENT_INTERRUPT_NUMBER;
+
   cl_args_t *args = get_cl_args(argc, argv);
 
   if (args->frame_limit)
@@ -25,19 +44,41 @@ int main(int argc, char **argv)
   }
 
   sci_desc_t sd;
-  // sci_error_t error;
+  sci_error_t error;
   sci_map_t localMap;
   sci_map_t remoteMap;
   sci_local_segment_t localSegment;
   sci_remote_segment_t remoteSegment;
+  sci_local_data_interrupt_t localInterrupt;
+  sci_remote_data_interrupt_t remoteInterrupt;
 
   volatile struct server_segment *server_segment;
   volatile struct client_segment *client_segment;
   struct c63_common *cm = init_c63_enc(args->width, args->height);
 
   sisci_init(
-      FALSE, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
+      FALSE, LOCAL_ADAPTER_NUMBER, args->remote_node, &sd, &localMap, &remoteMap,
       &localSegment, &remoteSegment, &server_segment, &client_segment, cm);
+
+  // Create an interupt, and connect to a remote interrupt
+  SCICreateDataInterrupt(
+      sd, &localInterrupt, LOCAL_ADAPTER_NUMBER, &client_interrupt_number,
+      NULL, NULL, SCI_FLAG_FIXED_INTNO, &error);
+  ERR_CHECK(error, "SCICreateDataInterrupt");
+
+  while (TRUE) {
+    SCIConnectDataInterrupt(
+        sd, &remoteInterrupt, args->remote_node, LOCAL_ADAPTER_NUMBER,
+        SERVER_INTERRUPT_NUMBER, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    if (error == SCI_ERR_NO_SUCH_INTNO) {
+      continue;
+    } else if (error == SCI_ERR_OK) {
+      break;
+    } else {
+      ERR_CHECK(error, "SCIConnectDataInterrupt");
+    }
+  }
+  printf("client connected\n");
 
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
@@ -58,47 +99,58 @@ int main(int argc, char **argv)
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
 
+  uint8_t localCommand = CMD_CONTINUE;
+  uint8_t remoteCommand = CMD_QUIT;
+
   /* Encode input frames */
   int numframes = 0;
   while (TRUE)
   {
-    client_segment->cmd = CMD_WAIT;
-
     yuv_t *image = read_yuv(infile, cm);
     if (!image)
     {
-      server_segment->cmd = CMD_QUIT;
-      SCIFlush(NULL, NO_FLAGS);
+      localCommand = CMD_QUIT;
+      SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
+      ERR_CHECK(error, "SCITriggerDataInterrupt");
       break;
     }
 
     // send image to server
-    // memcpy(client_segment->image->Y, image->Y, cm->ypw * cm->yph * sizeof(uint8_t));
-    // memcpy(client_segment->image->U, image->U, cm->upw * cm->uph * sizeof(uint8_t));
-    // memcpy(client_segment->image->V, image->V, cm->vpw * cm->vph * sizeof(uint8_t));
-    server_segment->cmd = CMD_DONE;
+    memcpy(client_segment->image->Y, image->Y, cm->ypw * cm->yph * sizeof(uint8_t));
+    memcpy(client_segment->image->U, image->U, cm->upw * cm->uph * sizeof(uint8_t));
+    memcpy(client_segment->image->V, image->V, cm->vpw * cm->vph * sizeof(uint8_t));
     SCIFlush(NULL, NO_FLAGS);
+
+    localCommand = CMD_CONTINUE;
+    SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
+    ERR_CHECK(error, "SCITriggerDataInterrupt");
 
     free_yuv(image);
 
     // wait until server has encoded image
-    while (client_segment->cmd == CMD_WAIT);
+    SCIWaitForDataInterrupt(localInterrupt, &remoteCommand, NULL, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    ERR_CHECK(error, "SCIWaitForDataInterrupt");
+    if (remoteCommand == CMD_QUIT) {
+      fprintf(stderr, "Got quit message from server, this should not happen!\n");
+      break;
+    }
 
-    // copy server data into our cm - we don't really need to copy the whole struct
-    // memcpy(cm, (void *)&server_segment->cm, sizeof(struct c63_common));
-
-    // write_frame(cm);
+    printf("Writing frame %d\n", numframes);
+    c63_write_image(cm);
 
     ++numframes;
     if (args->frame_limit && numframes >= args->frame_limit)
     {
-      server_segment->cmd = CMD_QUIT;
-      SCIFlush(NULL, NO_FLAGS);
+      localCommand = CMD_QUIT;
+      SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
+      ERR_CHECK(error, "SCITriggerDataInterrupt");
       break;
     }
 
-    server_segment->cmd = CMD_DONE;
-    SCIFlush(NULL, NO_FLAGS);
+    // swap frames to get ready for next frame
+    yuv_t *tmp = cm->ref_recons;
+    cm->ref_recons = cm->curframe->recons;
+    cm->curframe->recons = tmp;
   }
 
   free(args);

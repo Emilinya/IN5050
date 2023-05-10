@@ -65,22 +65,45 @@ static void c63_encode_image(struct c63_common *cm)
 
 int main(int argc, char **argv)
 {
-  int localAdapterNo = 0;
+  unsigned int server_interrupt_number = SERVER_INTERRUPT_NUMBER;
   cl_args_t *args = get_cl_args(argc, argv);
 
   sci_desc_t sd;
+  sci_error_t error;
   sci_map_t localMap;
   sci_map_t remoteMap;
   sci_local_segment_t localSegment;
   sci_remote_segment_t remoteSegment;
+  sci_local_data_interrupt_t localInterrupt;
+  sci_remote_data_interrupt_t remoteInterrupt;
 
   volatile struct server_segment *server_segment;
   volatile struct client_segment *client_segment;
   struct c63_common *cm = init_c63_enc(args->width, args->height);
 
   sisci_init(
-      TRUE, localAdapterNo, args->remote_node, &sd, &localMap, &remoteMap,
+      TRUE, LOCAL_ADAPTER_NUMBER, args->remote_node, &sd, &localMap, &remoteMap,
       &localSegment, &remoteSegment, &server_segment, &client_segment, cm);
+
+  // Create an interupt, and connect to a remote interrupt
+  SCICreateDataInterrupt(
+      sd, &localInterrupt, LOCAL_ADAPTER_NUMBER, &server_interrupt_number,
+      NULL, NULL, SCI_FLAG_FIXED_INTNO, &error);
+  ERR_CHECK(error, "SCICreateDataInterrupt");
+
+  while (TRUE) {
+    SCIConnectDataInterrupt(
+        sd, &remoteInterrupt, args->remote_node, LOCAL_ADAPTER_NUMBER,
+        CLIENT_INTERRUPT_NUMBER, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    if (error == SCI_ERR_NO_SUCH_INTNO) {
+      continue;
+    } else if (error == SCI_ERR_OK) {
+      break;
+    } else {
+      ERR_CHECK(error, "SCIConnectDataInterrupt");
+    }
+  }
+  printf("server connected\n");
 
   // cm contains pointers to server and client segments
   cm->curframe = calloc(1, sizeof(struct frame));
@@ -95,29 +118,34 @@ int main(int argc, char **argv)
 
   cm->curframe->orig = client_segment->image;
 
+  uint8_t localCommand = CMD_CONTINUE;
+  uint8_t remoteCommand = CMD_QUIT;
+
   int framenum = 0;
   while (TRUE)
   {
-    server_segment->cmd = CMD_WAIT;
-
-    // wait until we have recived data from the client 
-    while (server_segment->cmd == CMD_WAIT);
-    if (server_segment->cmd == CMD_QUIT) {
+    // wait for data from client
+    SCIWaitForDataInterrupt(
+        localInterrupt, &remoteCommand, NULL, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    ERR_CHECK(error, "SCIWaitForDataInterrupt");
+    if (remoteCommand == CMD_QUIT) {
       break;
     }
 
     printf("Encoding frame %d\n", framenum);
-    // c63_encode_image(cm);
-
-    client_segment->cmd = CMD_DONE;
+    c63_encode_image(cm);
     SCIFlush(NULL, NO_FLAGS);
 
-    framenum++;
+    // tell client that we are done
+    SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
+    ERR_CHECK(error, "SCITriggerDataInterrupt");
+
+    ++framenum;
 
     // swap frames to get ready for next frame
-    // yuv_t *tmp = cm->ref_recons;
-    // cm->ref_recons = cm->curframe->recons;
-    // cm->curframe->recons = tmp;
+    yuv_t *tmp = cm->ref_recons;
+    cm->ref_recons = cm->curframe->recons;
+    cm->curframe->recons = tmp;
   }
 
   SCITerminate();

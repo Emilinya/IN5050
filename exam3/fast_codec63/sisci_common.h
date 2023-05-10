@@ -13,16 +13,18 @@
 #define SEGMENT_CLIENT GET_SEGMENTID(1)
 #define SEGMENT_SERVER GET_SEGMENTID(2)
 
+#define LOCAL_ADAPTER_NUMBER 0
+#define CLIENT_INTERRUPT_NUMBER GET_SEGMENTID(3)
+#define SERVER_INTERRUPT_NUMBER GET_SEGMENTID(4)
+
 enum cmd
 {
-    CMD_WAIT,
-    CMD_QUIT,
-    CMD_DONE
+    CMD_CONTINUE,
+    CMD_QUIT
 };
 
 struct server_segment
 {
-    uint32_t cmd;
     yuv_t *reference_recons;
     yuv_t *currenct_recons;
     yuv_t *predicted;
@@ -32,6 +34,5 @@ struct server_segment
 
 struct client_segment
 {
-    uint32_t cmd;
     yuv_t *image;
 };
