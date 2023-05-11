@@ -27,10 +27,9 @@
     } while (0)
 
 void sisci_init(
-    int isServer, int remoteNodeId, sci_desc_t *sd, sci_map_t *localMap,
-    sci_map_t *remoteMap, sci_local_segment_t *localSegment, sci_remote_segment_t *remoteSegment,
-    volatile struct server_segment **server_segment, volatile struct client_segment **client_segment,
-    struct c63_common *cm);
+    int isServer, int remoteNodeId, sci_desc_t *sd, sci_map_t *localMap, sci_map_t *remoteMap,
+    sci_local_segment_t *localSegment, sci_remote_segment_t *remoteSegment,
+    struct server_segment **server_segment, struct client_segment **client_segment, struct c63_common *cm);
 
 void sisci_create_interrupt(
     int isServer, int remoteNodeId, sci_desc_t *sd, sci_local_interrupt_t *localInterrupt,

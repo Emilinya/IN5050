@@ -76,27 +76,37 @@ int main(int argc, char **argv)
   sci_local_interrupt_t localInterrupt;
   sci_remote_interrupt_t remoteInterrupt;
 
-  volatile struct server_segment *server_segment;
-  volatile struct client_segment *client_segment;
+  struct server_segment *server_segment;
+  struct client_segment *client_segment;
+
   struct c63_common *cm = init_c63_enc(args->width, args->height);
+  cm->curframe = create_frame(cm);
+  cm->ref_recons = create_yuv(cm);
+  cm->curframe->orig = create_yuv(cm);
 
   sisci_init(
-      TRUE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment,
-      &remoteSegment, &server_segment, &client_segment, cm);
+      TRUE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment, &remoteSegment,
+      &server_segment, &client_segment, cm);
   sisci_create_interrupt(TRUE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
-  // cm contains pointers to server and client segments
-  cm->curframe = calloc(1, sizeof(struct frame));
-  cm->curframe->recons = server_segment->currenct_recons;
-  cm->curframe->predicted = server_segment->predicted;
-  cm->curframe->residuals = server_segment->residuals;
-  cm->curframe->mbs[Y_COMPONENT] = server_segment->mbs[Y_COMPONENT];
-  cm->curframe->mbs[U_COMPONENT] = server_segment->mbs[U_COMPONENT];
-  cm->curframe->mbs[V_COMPONENT] = server_segment->mbs[V_COMPONENT];
+  SCITriggerInterrupt(remoteInterrupt, NO_FLAGS, &error);
+  SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
 
-  cm->ref_recons = server_segment->reference_recons;
+  *server_segment->cmd = CMD_QUIT;
+  for (size_t i = 0; i < 5; i++)
+  {
+    server_segment->data[i] = i + 5;
+  }
 
-  cm->curframe->orig = client_segment->image;
+  for (size_t i = 0; i < 5; i++)
+  {
+    fprintf(stderr, "s %d\n", client_segment->data[i]);
+  }
+  fprintf(stderr, "s %d\n", *client_segment->cmd);
+
+  SCITerminate();
+
+  return EXIT_SUCCESS;
 
   int framenum = 0;
   while (TRUE)
@@ -109,12 +119,17 @@ int main(int argc, char **argv)
       break;
     }
 
+    // memcpy(cm->curframe->orig->Y, client_segment->image->Y, cm->ypw * cm->yph * sizeof(uint8_t));
+    // memcpy(cm->curframe->orig->U, client_segment->image->U, cm->upw * cm->uph * sizeof(uint8_t));
+    // memcpy(cm->curframe->orig->V, client_segment->image->V, cm->vpw * cm->vph * sizeof(uint8_t));
+
     fprintf(stderr, "Encoding frame %d\n", framenum);
-    // c63_encode_image(cm);
+    c63_encode_image(cm);
     SCIFlush(NULL, NO_FLAGS);
 
     // tell client that we are done
-    TRIGGER_DATA_INTERRUPT(remoteInterrupt, server_segment, CMD_CONTINUE, error);
+    TRIGGER_DATA_INTERRUPT(remoteInterrupt, server_segment, CMD_QUIT, error);
+    break;
 
     ++framenum;
 

@@ -25,16 +25,12 @@ enum cmd
 
 struct server_segment
 {
-    uint8_t cmd;
-    yuv_t *reference_recons;
-    yuv_t *currenct_recons;
-    yuv_t *predicted;
-    dct_t *residuals;
-    struct macroblock *mbs[COLOR_COMPONENTS];
+    volatile uint8_t *cmd;
+    volatile uint8_t *data;
 };
 
 struct client_segment
 {
-    uint8_t cmd;
-    yuv_t *image;
+    volatile uint8_t *cmd;
+    volatile uint8_t *data;
 };
