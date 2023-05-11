@@ -57,6 +57,10 @@ int main(int argc, char **argv)
   cm->curframe = create_frame(cm);
   cm->ref_recons = create_yuv(cm);
 
+  int ysize = cm->ypw * cm->yph;
+  int usize = cm->upw * cm->uph;
+  int vsize = cm->vpw * cm->vph;
+
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
 
@@ -67,22 +71,6 @@ int main(int argc, char **argv)
 
   SCITriggerInterrupt(remoteInterrupt, NO_FLAGS, &error);
   SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
-
-  *client_segment->cmd = CMD_QUIT;
-  for (size_t i = 0; i < 5; i++)
-  {
-    client_segment->data[i] = i * i;
-  }
-
-  for (size_t i = 0; i < 5; i++)
-  {
-    fprintf(stderr, "e %d\n", server_segment->data[i]);
-  }
-  fprintf(stderr, "e %d\n", *server_segment->cmd);
-
-  SCITerminate();
-
-  return EXIT_SUCCESS;
 
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
@@ -100,9 +88,7 @@ int main(int argc, char **argv)
     cm->curframe->orig = image;
 
     // send image to server
-    // memcpy(client_segment->image->Y, image->Y, cm->ypw * cm->yph * sizeof(uint8_t));
-    // memcpy(client_segment->image->U, image->U, cm->upw * cm->uph * sizeof(uint8_t));
-    // memcpy(client_segment->image->V, image->V, cm->vpw * cm->vph * sizeof(uint8_t));
+    MEMCPY_YUV(client_segment->image, cm->curframe->orig, ysize, usize, vsize);
     SCIFlush(NULL, NO_FLAGS);
 
     TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
@@ -112,10 +98,17 @@ int main(int argc, char **argv)
     // wait until server has encoded image
     SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
     ERR_CHECK(error, "SCIWaitForInterrupt");
-    if (server_segment->cmd == CMD_QUIT) {
+    if (*server_segment->cmd == CMD_QUIT) {
       fprintf(stderr, "Got quit message from server, this should not happen!\n");
       break;
     }
+
+    // copy data from server to cm
+    MEMCPY_YUV(cm->ref_recons, server_segment->reference_recons, ysize, usize, vsize);
+    MEMCPY_YUV(cm->curframe->recons, server_segment->currenct_recons, ysize, usize, vsize);
+    MEMCPY_YUV(cm->curframe->predicted, server_segment->predicted, ysize, usize, vsize);
+    MEMCPY_DCT(cm->curframe->residuals, server_segment->residuals, ysize, usize, vsize);
+    MEMCPY_MBS(cm->curframe->mbs, server_segment->mbs, cm->mb_rows * cm->mb_cols);
 
     fprintf(stderr, "Writing frame %d\n", numframes);
     c63_write_image(cm);
@@ -126,11 +119,6 @@ int main(int argc, char **argv)
       TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
       break;
     }
-
-    // swap frames to get ready for next frame
-    yuv_t *tmp = cm->ref_recons;
-    cm->ref_recons = cm->curframe->recons;
-    cm->curframe->recons = tmp;
   }
 
   free(args);

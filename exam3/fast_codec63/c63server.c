@@ -84,52 +84,41 @@ int main(int argc, char **argv)
   cm->ref_recons = create_yuv(cm);
   cm->curframe->orig = create_yuv(cm);
 
+  int ysize = cm->ypw * cm->yph;
+  int usize = cm->upw * cm->uph;
+  int vsize = cm->vpw * cm->vph;
+
   sisci_init(
       TRUE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment, &remoteSegment,
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(TRUE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
-  SCITriggerInterrupt(remoteInterrupt, NO_FLAGS, &error);
-  SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
-
-  *server_segment->cmd = CMD_QUIT;
-  for (size_t i = 0; i < 5; i++)
-  {
-    server_segment->data[i] = i + 5;
-  }
-
-  for (size_t i = 0; i < 5; i++)
-  {
-    fprintf(stderr, "s %d\n", client_segment->data[i]);
-  }
-  fprintf(stderr, "s %d\n", *client_segment->cmd);
-
-  SCITerminate();
-
-  return EXIT_SUCCESS;
-
   int framenum = 0;
   while (TRUE)
   {
     // wait for data from client
-    SCIWaitForInterrupt(
-        localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
     ERR_CHECK(error, "SCIWaitForInterrupt");
-    if (client_segment->cmd == CMD_QUIT) {
+    if (*client_segment->cmd == CMD_QUIT) {
       break;
     }
 
-    // memcpy(cm->curframe->orig->Y, client_segment->image->Y, cm->ypw * cm->yph * sizeof(uint8_t));
-    // memcpy(cm->curframe->orig->U, client_segment->image->U, cm->upw * cm->uph * sizeof(uint8_t));
-    // memcpy(cm->curframe->orig->V, client_segment->image->V, cm->vpw * cm->vph * sizeof(uint8_t));
+    // copy data from client to cm
+    MEMCPY_YUV(cm->curframe->orig, client_segment->image, ysize, usize, vsize);
 
     fprintf(stderr, "Encoding frame %d\n", framenum);
     c63_encode_image(cm);
+
+    // copy data from cm to server
+    MEMCPY_YUV(server_segment->reference_recons, cm->ref_recons, ysize, usize, vsize);
+    MEMCPY_YUV(server_segment->currenct_recons, cm->curframe->recons, ysize, usize, vsize);
+    MEMCPY_YUV(server_segment->predicted, cm->curframe->predicted, ysize, usize, vsize);
+    MEMCPY_DCT(server_segment->residuals, cm->curframe->residuals, ysize, usize, vsize);
+    MEMCPY_MBS(server_segment->mbs, cm->curframe->mbs, cm->mb_rows * cm->mb_cols);
     SCIFlush(NULL, NO_FLAGS);
 
     // tell client that we are done
-    TRIGGER_DATA_INTERRUPT(remoteInterrupt, server_segment, CMD_QUIT, error);
-    break;
+    TRIGGER_DATA_INTERRUPT(remoteInterrupt, server_segment, CMD_CONTINUE, error);
 
     ++framenum;
 

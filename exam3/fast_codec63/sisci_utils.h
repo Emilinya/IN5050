@@ -10,7 +10,7 @@
 
 #define TRIGGER_DATA_INTERRUPT(interrupt, segment, command, error) \
     do { \
-        segment->cmd = command; \
+        *segment->cmd = command; \
         SCIFlush(NULL, NO_FLAGS); \
         SCITriggerInterrupt(interrupt, NO_FLAGS, &error); \
         ERR_CHECK(error, "SCITriggerInterrupt"); \
