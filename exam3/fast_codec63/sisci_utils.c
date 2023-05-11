@@ -63,7 +63,7 @@ dct_t *map_remote_dct(
 }
 
 void sisci_init(
-    int initServer, int localAdapterNo, int remoteNodeId, sci_desc_t *sd, sci_map_t *localMap,
+    int isServer, int remoteNodeId, sci_desc_t *sd, sci_map_t *localMap,
     sci_map_t *remoteMap, sci_local_segment_t *localSegment, sci_remote_segment_t *remoteSegment,
     volatile struct server_segment **server_segment, volatile struct client_segment **client_segment,
     struct c63_common *cm)
@@ -78,13 +78,16 @@ void sisci_init(
     int imsize = ysize + usize + vsize;
     int mb_count = cm->mb_rows * cm->mb_cols;
 
-    if (initServer) {
+    if (isServer)
+    {
         myID = SEGMENT_SERVER;
         otherID = SEGMENT_CLIENT;
         segmentSize = sizeof(struct server_segment) + 3 * sizeof(yuv_t) + sizeof(dct_t);
         segmentSize += imsize * (3 * sizeof(uint8_t) + sizeof(int16_t));
         segmentSize += (mb_count + mb_count / 2) * sizeof(struct macroblock);
-    } else {
+    }
+    else
+    {
         myID = SEGMENT_CLIENT;
         otherID = SEGMENT_SERVER;
         segmentSize = sizeof(struct client_segment) + sizeof(yuv_t) + imsize * sizeof(uint8_t);
@@ -102,15 +105,16 @@ void sisci_init(
         NO_CALLBACK, NULL, NO_FLAGS, &error);
     ERR_CHECK(error, "SCICreateSegment");
 
-    SCIPrepareSegment(*localSegment, localAdapterNo, NO_FLAGS, &error);
+    SCIPrepareSegment(*localSegment, LOCAL_ADAPTER_NUMBER, NO_FLAGS, &error);
     ERR_CHECK(error, "SCIPrepareSegment");
 
-    SCISetSegmentAvailable(*localSegment, localAdapterNo, NO_FLAGS, &error);
+    SCISetSegmentAvailable(*localSegment, LOCAL_ADAPTER_NUMBER, NO_FLAGS, &error);
     ERR_CHECK(error, "SCISetSegmentAvailable");
 
-    while (1) {
+    while (1)
+    {
         SCIConnectSegment(
-            *sd, remoteSegment, remoteNodeId, otherID, localAdapterNo,
+            *sd, remoteSegment, remoteNodeId, otherID, LOCAL_ADAPTER_NUMBER,
             NO_CALLBACK, NULL, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
         if (error != SCI_ERR_NO_SUCH_SEGMENT)
         {
@@ -124,7 +128,8 @@ void sisci_init(
 
     // map server segment
     int offset = 0;
-    if (initServer) {
+    if (isServer)
+    {
         *server_segment = local_mapper(
             localSegment, localMap, &offset, sizeof(struct server_segment), &error);
         (*server_segment)->reference_recons = map_local_yuv(
@@ -141,7 +146,9 @@ void sisci_init(
             localSegment, localMap, &offset, mb_count / 4 * sizeof(struct macroblock), &error);
         (*server_segment)->mbs[V_COMPONENT] = local_mapper(
             localSegment, localMap, &offset, mb_count / 4 * sizeof(struct macroblock), &error);
-    } else {
+    }
+    else
+    {
         *server_segment = remote_mapper(
             remoteSegment, remoteMap, &offset, sizeof(struct server_segment), &error);
         (*server_segment)->reference_recons = map_remote_yuv(
@@ -162,13 +169,59 @@ void sisci_init(
 
     // map client segment
     offset = 0;
-    if (initServer) {
+    if (isServer)
+    {
         *client_segment = remote_mapper(remoteSegment, remoteMap, &offset, sizeof(struct client_segment), &error);
         (*client_segment)->image = map_remote_yuv(
             remoteSegment, remoteMap, &offset, ysize, usize, vsize, &error);
-    } else {
+    }
+    else
+    {
         *client_segment = local_mapper(localSegment, localMap, &offset, sizeof(struct client_segment), &error);
         (*client_segment)->image = map_local_yuv(
             localSegment, localMap, &offset, ysize, usize, vsize, &error);
+    }
+}
+
+void sisci_create_interrupt(
+    int isServer, int remoteNodeId, sci_desc_t *sd, sci_local_interrupt_t *localInterrupt,
+    sci_remote_interrupt_t *remoteInterrupt)
+{
+    unsigned int my_interrupt_number, other_interrupt_number;
+
+    if (isServer)
+    {
+        my_interrupt_number = SERVER_INTERRUPT_NUMBER;
+        other_interrupt_number = CLIENT_INTERRUPT_NUMBER;
+    }
+    else
+    {
+        my_interrupt_number = CLIENT_INTERRUPT_NUMBER;
+        other_interrupt_number = SERVER_INTERRUPT_NUMBER;
+    }
+
+    sci_error_t error;
+    SCICreateInterrupt(
+        *sd, localInterrupt, LOCAL_ADAPTER_NUMBER, &my_interrupt_number,
+        NULL, NULL, SCI_FLAG_FIXED_INTNO, &error);
+    ERR_CHECK(error, "SCICreateInterrupt");
+
+    while (1)
+    {
+        SCIConnectInterrupt(
+            *sd, remoteInterrupt, remoteNodeId, LOCAL_ADAPTER_NUMBER,
+            other_interrupt_number, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+        if (error == SCI_ERR_NO_SUCH_INTNO)
+        {
+            continue;
+        }
+        else if (error == SCI_ERR_OK)
+        {
+            break;
+        }
+        else
+        {
+            ERR_CHECK(error, "SCIConnectInterrupt");
+        }
     }
 }

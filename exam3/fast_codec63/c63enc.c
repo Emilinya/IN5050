@@ -34,8 +34,6 @@ static void c63_write_image(struct c63_common *cm) {
 
 int main(int argc, char **argv)
 {
-  unsigned int client_interrupt_number = CLIENT_INTERRUPT_NUMBER;
-
   cl_args_t *args = get_cl_args(argc, argv);
 
   if (args->frame_limit)
@@ -49,36 +47,17 @@ int main(int argc, char **argv)
   sci_map_t remoteMap;
   sci_local_segment_t localSegment;
   sci_remote_segment_t remoteSegment;
-  sci_local_data_interrupt_t localInterrupt;
-  sci_remote_data_interrupt_t remoteInterrupt;
+  sci_local_interrupt_t localInterrupt;
+  sci_remote_interrupt_t remoteInterrupt;
 
   volatile struct server_segment *server_segment;
   volatile struct client_segment *client_segment;
   struct c63_common *cm = init_c63_enc(args->width, args->height);
 
   sisci_init(
-      FALSE, LOCAL_ADAPTER_NUMBER, args->remote_node, &sd, &localMap, &remoteMap,
-      &localSegment, &remoteSegment, &server_segment, &client_segment, cm);
-
-  // Create an interupt, and connect to a remote interrupt
-  SCICreateDataInterrupt(
-      sd, &localInterrupt, LOCAL_ADAPTER_NUMBER, &client_interrupt_number,
-      NULL, NULL, SCI_FLAG_FIXED_INTNO, &error);
-  ERR_CHECK(error, "SCICreateDataInterrupt");
-
-  while (TRUE) {
-    SCIConnectDataInterrupt(
-        sd, &remoteInterrupt, args->remote_node, LOCAL_ADAPTER_NUMBER,
-        SERVER_INTERRUPT_NUMBER, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
-    if (error == SCI_ERR_NO_SUCH_INTNO) {
-      continue;
-    } else if (error == SCI_ERR_OK) {
-      break;
-    } else {
-      ERR_CHECK(error, "SCIConnectDataInterrupt");
-    }
-  }
-  printf("client connected\n");
+      FALSE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment,
+      &remoteSegment, &server_segment, &client_segment, cm);
+  sisci_create_interrupt(FALSE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
@@ -99,9 +78,6 @@ int main(int argc, char **argv)
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
 
-  uint8_t localCommand = CMD_CONTINUE;
-  uint8_t remoteCommand = CMD_QUIT;
-
   /* Encode input frames */
   int numframes = 0;
   while (TRUE)
@@ -109,9 +85,7 @@ int main(int argc, char **argv)
     yuv_t *image = read_yuv(infile, cm);
     if (!image)
     {
-      localCommand = CMD_QUIT;
-      SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
-      ERR_CHECK(error, "SCITriggerDataInterrupt");
+      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
       break;
     }
 
@@ -121,29 +95,25 @@ int main(int argc, char **argv)
     memcpy(client_segment->image->V, image->V, cm->vpw * cm->vph * sizeof(uint8_t));
     SCIFlush(NULL, NO_FLAGS);
 
-    localCommand = CMD_CONTINUE;
-    SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
-    ERR_CHECK(error, "SCITriggerDataInterrupt");
+    TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
 
     free_yuv(image);
 
     // wait until server has encoded image
-    SCIWaitForDataInterrupt(localInterrupt, &remoteCommand, NULL, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
-    ERR_CHECK(error, "SCIWaitForDataInterrupt");
-    if (remoteCommand == CMD_QUIT) {
+    SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    ERR_CHECK(error, "SCIWaitForInterrupt");
+    if (server_segment->cmd == CMD_QUIT) {
       fprintf(stderr, "Got quit message from server, this should not happen!\n");
       break;
     }
 
-    printf("Writing frame %d\n", numframes);
-    c63_write_image(cm);
+    fprintf(stderr, "Writing frame %d\n", numframes);
+    // c63_write_image(cm);
 
     ++numframes;
     if (args->frame_limit && numframes >= args->frame_limit)
     {
-      localCommand = CMD_QUIT;
-      SCITriggerDataInterrupt(remoteInterrupt, &localCommand, sizeof(uint8_t), NO_FLAGS, &error);
-      ERR_CHECK(error, "SCITriggerDataInterrupt");
+      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
       break;
     }
 

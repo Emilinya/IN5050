@@ -25,6 +25,7 @@ enum cmd
 
 struct server_segment
 {
+    uint8_t cmd;
     yuv_t *reference_recons;
     yuv_t *currenct_recons;
     yuv_t *predicted;
@@ -34,5 +35,6 @@ struct server_segment
 
 struct client_segment
 {
+    uint8_t cmd;
     yuv_t *image;
 };
