@@ -67,14 +67,14 @@ void sisci_init(
     {
         myID = SEGMENT_SERVER;
         otherID = SEGMENT_CLIENT;
-        segmentSize = (1 + 3 * imsize) * sizeof(uint8_t) + imsize * sizeof(int16_t);
-        segmentSize += (mb_count + mb_count / 2) * mb_size;
+        segmentSize = (1 + imsize) * sizeof(uint8_t);
     }
     else
     {
         myID = SEGMENT_CLIENT;
         otherID = SEGMENT_SERVER;
-        segmentSize = (1 + imsize) * sizeof(uint8_t);
+        segmentSize = (1 + 3 * imsize) * sizeof(uint8_t) + imsize * sizeof(int16_t);
+        segmentSize += (mb_count + mb_count / 2) * mb_size;
     }
 
     sci_error_t error;
@@ -117,31 +117,31 @@ void sisci_init(
     sci_map_t *lm = localMap;
 
     // create segment structs
-    struct server_segment *server_ptr = malloc(sizeof(struct server_segment));
-    server_ptr->reference_recons = malloc(sizeof(yuv_t));
-    server_ptr->currenct_recons = malloc(sizeof(yuv_t));
-    server_ptr->predicted = malloc(sizeof(yuv_t));
-    server_ptr->residuals = malloc(sizeof(dct_t));
-
     struct client_segment *client_ptr = malloc(sizeof(struct client_segment));
-    client_ptr->image = malloc(sizeof(yuv_t));
+    client_ptr->reference_recons = malloc(sizeof(yuv_t));
+    client_ptr->currenct_recons = malloc(sizeof(yuv_t));
+    client_ptr->predicted = malloc(sizeof(yuv_t));
+    client_ptr->residuals = malloc(sizeof(dct_t));
 
-    // map server segment
-    int offset = 0;
-    server_ptr->cmd = mapper(!isServer, ls, rs, lm, rm, &offset, sizeof(uint8_t), &error);
-    map_yuv(server_ptr->reference_recons, !isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
-    map_yuv(server_ptr->currenct_recons, !isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
-    map_yuv(server_ptr->predicted, !isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
-    map_dct(server_ptr->residuals, !isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
-
-    server_ptr->mbs[Y_COMPONENT] = mapper(!isServer, ls, rs, lm, rm, &offset, mb_count * mb_size, &error);
-    server_ptr->mbs[U_COMPONENT] = mapper(!isServer, ls, rs, lm, rm, &offset, mb_count / 4 * mb_size, &error);
-    server_ptr->mbs[V_COMPONENT] = mapper(!isServer, ls, rs, lm, rm, &offset, mb_count / 4 * mb_size, &error);
+    struct server_segment *server_ptr = malloc(sizeof(struct server_segment));
+    server_ptr->image = malloc(sizeof(yuv_t));
 
     // map client segment
-    offset = 0;
+    int offset = 0;
     client_ptr->cmd = mapper(isServer, ls, rs, lm, rm, &offset, sizeof(uint8_t), &error);
-    map_yuv(client_ptr->image, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
+    map_yuv(client_ptr->reference_recons, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
+    map_yuv(client_ptr->currenct_recons, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
+    map_yuv(client_ptr->predicted, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
+    map_dct(client_ptr->residuals, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
+
+    client_ptr->mbs[Y_COMPONENT] = mapper(isServer, ls, rs, lm, rm, &offset, mb_count * mb_size, &error);
+    client_ptr->mbs[U_COMPONENT] = mapper(isServer, ls, rs, lm, rm, &offset, mb_count / 4 * mb_size, &error);
+    client_ptr->mbs[V_COMPONENT] = mapper(isServer, ls, rs, lm, rm, &offset, mb_count / 4 * mb_size, &error);
+
+    // map server segment
+    offset = 0;
+    server_ptr->cmd = mapper(!isServer, ls, rs, lm, rm, &offset, sizeof(uint8_t), &error);
+    map_yuv(server_ptr->image, !isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
 
     // return segments
     (*server_segment) = server_ptr;

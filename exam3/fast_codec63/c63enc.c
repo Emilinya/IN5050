@@ -91,7 +91,7 @@ int main(int argc, char **argv)
     cm->curframe->orig = image;
 
     // send image to server
-    MEMCPY_YUV(client_segment->image, cm->curframe->orig, ysize, usize, vsize);
+    MEMCPY_YUV(server_segment->image, cm->curframe->orig, ysize, usize, vsize);
     SCIFlush(NULL, NO_FLAGS);
 
     TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
@@ -111,11 +111,11 @@ int main(int argc, char **argv)
     }
 
     // copy data from server to cm
-    MEMCPY_YUV(cm->ref_recons, server_segment->reference_recons, ysize, usize, vsize);
-    MEMCPY_YUV(cm->curframe->recons, server_segment->currenct_recons, ysize, usize, vsize);
-    MEMCPY_YUV(cm->curframe->predicted, server_segment->predicted, ysize, usize, vsize);
-    MEMCPY_DCT(cm->curframe->residuals, server_segment->residuals, ysize, usize, vsize);
-    MEMCPY_MBS(cm->curframe->mbs, server_segment->mbs, cm->mb_rows * cm->mb_cols);
+    MEMCPY_YUV(cm->ref_recons, client_segment->reference_recons, ysize, usize, vsize);
+    MEMCPY_YUV(cm->curframe->recons, client_segment->currenct_recons, ysize, usize, vsize);
+    MEMCPY_YUV(cm->curframe->predicted, client_segment->predicted, ysize, usize, vsize);
+    MEMCPY_DCT(cm->curframe->residuals, client_segment->residuals, ysize, usize, vsize);
+    MEMCPY_MBS(cm->curframe->mbs, client_segment->mbs, cm->mb_rows * cm->mb_cols);
 
     fprintf(stderr, "Writing frame %d\n", numframes);
     clock_gettime(CLOCK_MONOTONIC_RAW, &write_start);
