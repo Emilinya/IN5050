@@ -34,7 +34,3 @@ void sisci_init(
 void sisci_create_interrupt(
     int isServer, int remoteNodeId, sci_desc_t *sd, sci_local_interrupt_t *localInterrupt,
     sci_remote_interrupt_t *remoteInterrupt);
-
-int sisci_create_data_segment(
-    sci_desc_t *sd, sci_local_segment_t *localDataSegment,
-    struct data_segment **data_segment, struct c63_common *cm);

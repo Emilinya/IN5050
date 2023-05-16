@@ -72,16 +72,13 @@ int main(int argc, char **argv)
   sci_error_t error;
   sci_map_t localMap;
   sci_map_t remoteMap;
-  sci_dma_queue_t dma_queue;
   sci_local_segment_t localSegment;
   sci_remote_segment_t remoteSegment;
-  sci_local_segment_t localDataSegment;
   sci_local_interrupt_t localInterrupt;
   sci_remote_interrupt_t remoteInterrupt;
 
   struct server_segment *server_segment;
   struct client_segment *client_segment;
-  struct data_segment *data_segment;
 
   struct c63_common *cm = init_c63_enc(args->width, args->height);
   cm->curframe = create_frame(cm);
@@ -96,9 +93,6 @@ int main(int argc, char **argv)
       TRUE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment, &remoteSegment,
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(TRUE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
-  int data_size = sisci_create_data_segment(&sd, &localDataSegment, &data_segment, cm);
-  SCICreateDMAQueue(sd, &dma_queue, LOCAL_ADAPTER_NUMBER, 5, NO_FLAGS, &error);
-  ERR_CHECK(error, "SCICreateDMAQueue");
 
   cm->curframe->orig = server_segment->image;
 
@@ -128,17 +122,12 @@ int main(int argc, char **argv)
     encode_time += TIME_IN_SECONDS(encode_start, encode_end);
 
     // copy data from cm to server
-    MEMCPY_YUV(data_segment->reference_recons, cm->ref_recons, ysize, usize, vsize);
-    MEMCPY_YUV(data_segment->currenct_recons, cm->curframe->recons, ysize, usize, vsize);
-    MEMCPY_YUV(data_segment->predicted, cm->curframe->predicted, ysize, usize, vsize);
-    MEMCPY_DCT(data_segment->residuals, cm->curframe->residuals, ysize, usize, vsize);
-    MEMCPY_MBS(data_segment->mbs, cm->curframe->mbs, cm->mb_rows * cm->mb_cols);
-    SCIStartDmaTransfer(
-      dma_queue, localDataSegment, remoteSegment, 0, data_size,
-      sizeof(uint8_t), NO_CALLBACK, NULL, NO_FLAGS, &error);
-    ERR_CHECK(error, "SCIStartDmaTransfer");
-    SCIWaitForDMAQueue(dma_queue, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
-    ERR_CHECK(error, "SCIWaitForDMAQueue");
+    MEMCPY_YUV(client_segment->reference_recons, cm->ref_recons, ysize, usize, vsize);
+    MEMCPY_YUV(client_segment->currenct_recons, cm->curframe->recons, ysize, usize, vsize);
+    MEMCPY_YUV(client_segment->predicted, cm->curframe->predicted, ysize, usize, vsize);
+    MEMCPY_DCT(client_segment->residuals, cm->curframe->residuals, ysize, usize, vsize);
+    MEMCPY_MBS(client_segment->mbs, cm->curframe->mbs, cm->mb_rows * cm->mb_cols);
+    SCIFlush(NULL, NO_FLAGS);
 
     // tell client that we are done
     TRIGGER_DATA_INTERRUPT(remoteInterrupt, server_segment, CMD_CONTINUE, error);
