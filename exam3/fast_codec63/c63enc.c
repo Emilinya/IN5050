@@ -137,7 +137,7 @@ int main(int argc, char **argv)
   double wait_percent = 100.0 * wait_time / total_time;
   double write_percent = 100.0 * write_time / total_time;
   double memcpy_percent = 100.0 * (1.0 - (wait_time + write_time) / total_time);
-  fprintf(stderr, "Encoder timings:\n");
+  fprintf(stderr, "Writer timings:\n");
   fprintf(stderr, "  Waiting: %f %%\n", wait_percent);
   fprintf(stderr, "  Writing: %f %%\n", write_percent);
   fprintf(stderr, "   Memcpy: %f %%\n", memcpy_percent);

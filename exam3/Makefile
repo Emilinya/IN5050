@@ -1,6 +1,3 @@
-FAST_SRC = $(wildcard fast_codec63/*.c) $(wildcard fast_codec63/*.cu) $(wildcard fast_codec63/*.h)
-REFERENCE_SRC = $(wildcard reference_codec63/*.c) $(wildcard reference_codec63/*.h)
-
 YUV_FILE=/opt/Media/foreman.yuv
 COMP_FRAMES?=10
 PREV_FRAMES=$(shell cat test/fc.txt)
