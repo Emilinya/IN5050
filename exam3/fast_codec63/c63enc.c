@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "c63.h"
 #include "utils.h"
@@ -72,6 +73,11 @@ int main(int argc, char **argv)
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
 
+  struct timespec total_start, total_end, wait_start, wait_end, write_start, write_end;
+  double wait_time, write_time;
+
+  clock_gettime(CLOCK_MONOTONIC_RAW, &total_start);
+
   /* Encode input frames */
   int numframes = 0;
   while (TRUE)
@@ -93,7 +99,11 @@ int main(int argc, char **argv)
     free_yuv(image);
 
     // wait until server has encoded image
+    clock_gettime(CLOCK_MONOTONIC_RAW, &wait_start);
     SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &wait_end);
+    wait_time += TIME_IN_SECONDS(wait_start, wait_end);
+
     ERR_CHECK(error, "SCIWaitForInterrupt");
     if (*server_segment->cmd == CMD_QUIT) {
       fprintf(stderr, "Got quit message from server, this should not happen!\n");
@@ -108,7 +118,10 @@ int main(int argc, char **argv)
     MEMCPY_MBS(cm->curframe->mbs, server_segment->mbs, cm->mb_rows * cm->mb_cols);
 
     fprintf(stderr, "Writing frame %d\n", numframes);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &write_start);
     c63_write_image(cm);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &write_end);
+    write_time += TIME_IN_SECONDS(write_start, write_end);
 
     ++numframes;
     if (args->frame_limit && numframes >= args->frame_limit)
@@ -117,6 +130,17 @@ int main(int argc, char **argv)
       break;
     }
   }
+
+  clock_gettime(CLOCK_MONOTONIC_RAW, &total_end);
+  double total_time = TIME_IN_SECONDS(total_start, total_end);
+
+  double wait_percent = 100.0 * wait_time / total_time;
+  double write_percent = 100.0 * write_time / total_time;
+  double memcpy_percent = 100.0 * (1.0 - (wait_time + write_time) / total_time);
+  fprintf(stderr, "Encoder timings:\n");
+  fprintf(stderr, "  Waiting: %f %%\n", wait_percent);
+  fprintf(stderr, "  Writing: %f %%\n", write_percent);
+  fprintf(stderr, "   Memcpy: %f %%\n", memcpy_percent);
 
   free(args);
 

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "c63.h"
 #include "utils.h"
@@ -93,11 +94,20 @@ int main(int argc, char **argv)
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(TRUE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
+  struct timespec total_start, total_end, wait_start, wait_end, encode_start, encode_end;
+  double wait_time, encode_time;
+
+  clock_gettime(CLOCK_MONOTONIC_RAW, &total_start);
+
   int framenum = 0;
   while (TRUE)
   {
     // wait for data from client
+    clock_gettime(CLOCK_MONOTONIC_RAW, &wait_start);
     SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &wait_end);
+    wait_time += TIME_IN_SECONDS(wait_start, wait_end);
+
     ERR_CHECK(error, "SCIWaitForInterrupt");
     if (*client_segment->cmd == CMD_QUIT) {
       break;
@@ -107,7 +117,10 @@ int main(int argc, char **argv)
     MEMCPY_YUV(cm->curframe->orig, client_segment->image, ysize, usize, vsize);
 
     fprintf(stderr, "Encoding frame %d\n", framenum);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &encode_start);
     c63_encode_image(cm);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &encode_end);
+    encode_time += TIME_IN_SECONDS(encode_start, encode_end);
 
     // copy data from cm to server
     MEMCPY_YUV(server_segment->reference_recons, cm->ref_recons, ysize, usize, vsize);
@@ -128,8 +141,20 @@ int main(int argc, char **argv)
     cm->curframe->recons = tmp;
   }
 
-  SCITerminate();
+  clock_gettime(CLOCK_MONOTONIC_RAW, &total_end);
+  double total_time = TIME_IN_SECONDS(total_start, total_end);
+
+  double wait_percent = 100.0 * wait_time / total_time;
+  double encode_percent = 100.0 * encode_time / total_time;
+  double memcpy_percent = 100.0 * (1.0 - (wait_time + encode_time) / total_time);
+  fprintf(stderr, "Encoder timings:\n");
+  fprintf(stderr, "   Waiting: %f %%\n", wait_percent);
+  fprintf(stderr, "  Encoding: %f %%\n", encode_percent);
+  fprintf(stderr, "    Memcpy: %f %%\n", memcpy_percent);
+
   free(args);
+
+  SCITerminate();
 
   return EXIT_SUCCESS;
 }

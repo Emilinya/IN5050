@@ -10,6 +10,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define TIME_IN_SECONDS(start, end) (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9
 
 #define MEMCPY_YUV(dest_yuv, src_yuv, ysize, usize, vsize) \
     do { \
