@@ -38,3 +38,12 @@ struct client_segment
     dct_t *residuals;
     struct macroblock *mbs[COLOR_COMPONENTS];
 };
+
+struct data_segment
+{
+    yuv_t *reference_recons;
+    yuv_t *currenct_recons;
+    yuv_t *predicted;
+    dct_t *residuals;
+    struct macroblock *mbs[COLOR_COMPONENTS];
+};
