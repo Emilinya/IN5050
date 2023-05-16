@@ -16,6 +16,7 @@ extern uint8_t ACVLC_data[2][162];
 extern uint8_t zigzag_U[64];
 extern uint8_t zigzag_V[64];
 extern float dctlookup[8][8];
+extern float dctlookup_transpose[8][8];
 extern uint16_t MVVLC[8];
 extern uint8_t MVVLC_Size[8];
 

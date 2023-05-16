@@ -1,0 +1,9 @@
+Writer timings:
+  Waiting: 34.460723 %
+  Writing: 0.492051 %
+   Memcpy: 65.047226 %
+
+Encoder timings:
+   Waiting: 66.718129 %
+  Encoding: 24.031503 %
+    Memcpy: 9.250368 %

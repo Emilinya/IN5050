@@ -1,9 +1,12 @@
-#include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
+#include <inttypes.h>
+#include <arm_neon.h>
 
 #include "cosine_transform.h"
 #include "tables.h"
+
+#include <stdio.h>
 
 static void transpose_block(float *in_data, float *out_data)
 {
@@ -18,38 +21,56 @@ static void transpose_block(float *in_data, float *out_data)
   }
 }
 
-static void dct_1d(float *in_data, float *out_data)
+__attribute__((always_inline)) static void dct_1d(float *in_data, float *out_data)
 {
-  int i, j;
+  // define two vectors with 4 32-bit floats each,
+  // one for the first hald of the output, the other for the other half
+  float32x4_t out_data_1_v = vdupq_n_f32(0.);
+  float32x4_t out_data_2_v = vdupq_n_f32(0.);
 
-  for (i = 0; i < 8; ++i)
+  for (int i = 0; i < 8; ++i)
   {
-    float dct = 0;
+    // load the first four values of row i of the lookup table into a vector
+    float32x4_t dctlookup_1_v = vld1q_f32(dctlookup[i]);
 
-    for (j = 0; j < 8; ++j)
-    {
-      dct += in_data[j] * dctlookup[j][i];
-    }
+    // multiply each value in the vector with the scalar in_data[i]
+    float32x4_t row_prod_1 = vmulq_n_f32(dctlookup_1_v, in_data[i]);
 
-    out_data[i] = dct;
+    // add the row product vector to the out data accumelator
+    out_data_1_v = vaddq_f32(out_data_1_v, row_prod_1);
+
+    // do the same steps as above, but with the second half of the lookup table row
+    float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup[i][4]);
+    float32x4_t row_prod_2 = vmulq_n_f32(dctlookup_2_v, in_data[i]);
+    out_data_2_v = vaddq_f32(out_data_2_v, row_prod_2);
   }
+
+  // store the out data vectors in the out data array
+  vst1q_f32(out_data, out_data_1_v);
+  vst1q_f32(&out_data[4], out_data_2_v);
 }
 
-static void idct_1d(float *in_data, float *out_data)
+__attribute__((always_inline)) static void idct_1d(float *in_data, float *out_data)
 {
-  int i, j;
+  // this function is identical to dct_id, except it uses dctlookup_transpose
+  // instead of dctlookup
 
-  for (i = 0; i < 8; ++i)
+  float32x4_t out_data_1_v = vdupq_n_f32(0.);
+  float32x4_t out_data_2_v = vdupq_n_f32(0.);
+
+  for (int i = 0; i < 8; ++i)
   {
-    float idct = 0;
+    float32x4_t dctlookup_1_v = vld1q_f32(dctlookup_transpose[i]);
+    float32x4_t row_prod_1 = vmulq_n_f32(dctlookup_1_v, in_data[i]);
+    out_data_1_v = vaddq_f32(out_data_1_v, row_prod_1);
 
-    for (j = 0; j < 8; ++j)
-    {
-      idct += in_data[j] * dctlookup[i][j];
-    }
-
-    out_data[i] = idct;
+    float32x4_t dctlookup_2_v = vld1q_f32(&dctlookup_transpose[i][4]);
+    float32x4_t row_prod_2 = vmulq_n_f32(dctlookup_2_v, in_data[i]);
+    out_data_2_v = vaddq_f32(out_data_2_v, row_prod_2);
   }
+
+  vst1q_f32(out_data, out_data_1_v);
+  vst1q_f32(&out_data[4], out_data_2_v);
 }
 
 static void scale_block(float *in_data, float *out_data)
@@ -102,8 +123,8 @@ static void dequantize_block(float *in_data, float *out_data,
   }
 }
 
-void dct_quant_block_8x8(int16_t *in_data, int16_t *out_data,
-                         uint8_t *quant_tbl)
+__attribute__((always_inline)) void dct_quant_block_8x8(
+    int16_t *in_data, int16_t *out_data, uint8_t *quant_tbl)
 {
   float mb[8 * 8] __attribute((aligned(16)));
   float mb2[8 * 8] __attribute((aligned(16)));
@@ -136,8 +157,8 @@ void dct_quant_block_8x8(int16_t *in_data, int16_t *out_data,
   }
 }
 
-void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
-                            uint8_t *quant_tbl)
+__attribute__((always_inline)) void dequant_idct_block_8x8(
+    int16_t *in_data, int16_t *out_data, uint8_t *quant_tbl)
 {
   float mb[8 * 8] __attribute((aligned(16)));
   float mb2[8 * 8] __attribute((aligned(16)));
@@ -170,8 +191,8 @@ void dequant_idct_block_8x8(int16_t *in_data, int16_t *out_data,
   }
 }
 
-void dequantize_idct_row(int16_t *in_data, uint8_t *prediction, int w, int h,
-                         int y, uint8_t *out_data, uint8_t *quantization)
+__attribute__((always_inline)) void dequantize_idct_row(
+    int16_t *in_data, uint8_t *prediction, int w, int h, int y, uint8_t *out_data, uint8_t *quantization)
 {
   int x;
 
@@ -219,8 +240,8 @@ void dequantize_idct(int16_t *in_data, uint8_t *prediction, uint32_t width,
   }
 }
 
-void dct_quantize_row(uint8_t *in_data, uint8_t *prediction, int w, int h,
-                      int16_t *out_data, uint8_t *quantization)
+__attribute__((always_inline)) void dct_quantize_row(
+    uint8_t *in_data, uint8_t *prediction, int w, int h, int16_t *out_data, uint8_t *quantization)
 {
   int x;
 

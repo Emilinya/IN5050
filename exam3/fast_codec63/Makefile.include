@@ -7,6 +7,7 @@ CU_HOME  := /usr/local/cuda
 SOURCES = $(patsubst ../%,%,$(wildcard ../*.c))
 
 MAIN_FILES = c63enc.o c63dec.o c63pred.o c63server.o
+SIMD_FILES = motion_estimate.o cosine_transform.o
 OBJECTS = $(filter-out $(MAIN_FILES), $(SOURCES:.c=.o))
 
 DEPENDENCIES = $(addprefix .,$(SOURCES:.c=.d))  # Add dot prefix to hide files.
@@ -45,7 +46,7 @@ LDLIBS   := -lsisci -lm
 all: c63enc c63dec c63pred
 c63server: c63server.o $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
-c63enc: c63enc.o $(OBJECTS)
+c63enc: c63enc.o $(filter-out $(SIMD_FILES), $(OBJECTS))
 	echo $(OBJECTS)
 	$(CC) $^ $(CFLAGS) $(LDFLAGS) -o $@
 c63dec: c63dec.c $(OBJECTS)
