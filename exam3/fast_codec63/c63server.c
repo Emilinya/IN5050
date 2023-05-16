@@ -94,8 +94,10 @@ int main(int argc, char **argv)
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(TRUE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
+  cm->curframe->orig = server_segment->image;
+
   struct timespec total_start, total_end, wait_start, wait_end, encode_start, encode_end;
-  double wait_time, encode_time;
+  double wait_time = 0, encode_time = 0;
 
   clock_gettime(CLOCK_MONOTONIC_RAW, &total_start);
 
@@ -112,9 +114,6 @@ int main(int argc, char **argv)
     if (*client_segment->cmd == CMD_QUIT) {
       break;
     }
-
-    // copy data from client to cm
-    MEMCPY_YUV(cm->curframe->orig, server_segment->image, ysize, usize, vsize);
 
     fprintf(stderr, "Encoding frame %d\n", framenum);
     clock_gettime(CLOCK_MONOTONIC_RAW, &encode_start);

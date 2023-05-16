@@ -70,11 +70,19 @@ int main(int argc, char **argv)
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(FALSE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
+  cm->ref_recons = client_segment->reference_recons;
+  cm->curframe->recons = client_segment->currenct_recons;
+  cm->curframe->predicted = client_segment->predicted;
+  cm->curframe->residuals = client_segment->residuals;
+  cm->curframe->mbs[Y_COMPONENT] = client_segment->mbs[Y_COMPONENT];
+  cm->curframe->mbs[U_COMPONENT] = client_segment->mbs[U_COMPONENT];
+  cm->curframe->mbs[V_COMPONENT] = client_segment->mbs[V_COMPONENT];
+
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
 
   struct timespec total_start, total_end, wait_start, wait_end, write_start, write_end;
-  double wait_time, write_time;
+  double wait_time = 0, write_time = 0;
 
   clock_gettime(CLOCK_MONOTONIC_RAW, &total_start);
 
@@ -82,21 +90,15 @@ int main(int argc, char **argv)
   int numframes = 0;
   while (TRUE)
   {
-    yuv_t *image = read_yuv(infile, cm);
-    if (!image)
+    if (!read_yuv(infile, cm, server_segment->image))
     {
       TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
       break;
     }
-    cm->curframe->orig = image;
-
     // send image to server
-    MEMCPY_YUV(server_segment->image, cm->curframe->orig, ysize, usize, vsize);
     SCIFlush(NULL, NO_FLAGS);
 
     TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
-
-    free_yuv(image);
 
     // wait until server has encoded image
     clock_gettime(CLOCK_MONOTONIC_RAW, &wait_start);
@@ -109,13 +111,6 @@ int main(int argc, char **argv)
       fprintf(stderr, "Got quit message from server, this should not happen!\n");
       break;
     }
-
-    // copy data from server to cm
-    MEMCPY_YUV(cm->ref_recons, client_segment->reference_recons, ysize, usize, vsize);
-    MEMCPY_YUV(cm->curframe->recons, client_segment->currenct_recons, ysize, usize, vsize);
-    MEMCPY_YUV(cm->curframe->predicted, client_segment->predicted, ysize, usize, vsize);
-    MEMCPY_DCT(cm->curframe->residuals, client_segment->residuals, ysize, usize, vsize);
-    MEMCPY_MBS(cm->curframe->mbs, client_segment->mbs, cm->mb_rows * cm->mb_cols);
 
     fprintf(stderr, "Writing frame %d\n", numframes);
     clock_gettime(CLOCK_MONOTONIC_RAW, &write_start);
