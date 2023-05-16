@@ -69,9 +69,6 @@ int main(int argc, char **argv)
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(FALSE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
-  SCITriggerInterrupt(remoteInterrupt, NO_FLAGS, &error);
-  SCIWaitForInterrupt(localInterrupt, SCI_INFINITE_TIMEOUT, NO_FLAGS, &error);
-
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
 
