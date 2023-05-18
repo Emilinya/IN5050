@@ -68,11 +68,11 @@ struct macroblock
 
 struct frame
 {
-  yuv_t *orig;        // Original input image
-  yuv_t *recons;      // Reconstructed image
-  yuv_t *predicted;   // Predicted frame from intra-prediction
+  yuv_t *orig;      // Original input image
+  yuv_t *recons;    // Reconstructed image
+  yuv_t *predicted; // Predicted frame from intra-prediction
 
-  dct_t *residuals;   // Difference between original image and predicted frame
+  dct_t *residuals; // Difference between original image and predicted frame
 
   struct macroblock *mbs[COLOR_COMPONENTS];
   int keyframe;
@@ -87,13 +87,13 @@ struct c63_common
 
   int mb_cols, mb_rows;
 
-  uint8_t qp;               // Quality parameter
+  uint8_t qp; // Quality parameter
 
   int me_search_range;
 
   uint8_t quanttbl[COLOR_COMPONENTS][64];
 
-  yuv_t *ref_recons;        // Reconstructed image from previous frame
+  struct frame *refframe;
   struct frame *curframe;
 
   int framenum;

@@ -17,17 +17,25 @@
 #include "motion_estimate.h"
 #include "cosine_transform.h"
 
-static void c63_encode_image(struct c63_common *cm)
+static void c63_encode_image(struct c63_common *cm, struct server_segment *server_segment)
 {
+  /* Advance to next frame */
+  destroy_frame(cm->refframe);
+  cm->refframe = cm->curframe;
+  cm->curframe = create_frame(cm);
+  cm->curframe->orig = server_segment->image;
+
   /* Check if keyframe */
   if (cm->framenum == 0 || cm->frames_since_keyframe == cm->keyframe_interval)
   {
     cm->curframe->keyframe = 1;
     cm->frames_since_keyframe = 0;
+    fprintf(stderr, "Encoding frame %d - keyframe\n", cm->framenum);
   }
   else
   {
     cm->curframe->keyframe = 0;
+    fprintf(stderr, "Encoding frame %d\n", cm->framenum);
   }
 
   if (!cm->curframe->keyframe)
@@ -82,8 +90,6 @@ int main(int argc, char **argv)
 
   struct c63_common *cm = init_c63_enc(args->width, args->height);
   cm->curframe = create_frame(cm);
-  cm->ref_recons = create_yuv(cm);
-  cm->curframe->orig = create_yuv(cm);
 
   int ysize = cm->ypw * cm->yph;
   int usize = cm->upw * cm->uph;
@@ -115,14 +121,13 @@ int main(int argc, char **argv)
       break;
     }
 
-    fprintf(stderr, "Encoding frame %d\n", framenum);
     clock_gettime(CLOCK_MONOTONIC_RAW, &encode_start);
-    c63_encode_image(cm);
+    c63_encode_image(cm, server_segment);
     clock_gettime(CLOCK_MONOTONIC_RAW, &encode_end);
     encode_time += TIME_IN_SECONDS(encode_start, encode_end);
 
     // copy data from cm to server
-    MEMCPY_YUV(client_segment->reference_recons, cm->ref_recons, ysize, usize, vsize);
+    MEMCPY_YUV(client_segment->reference_recons, cm->refframe->recons, ysize, usize, vsize);
     MEMCPY_YUV(client_segment->currenct_recons, cm->curframe->recons, ysize, usize, vsize);
     MEMCPY_YUV(client_segment->predicted, cm->curframe->predicted, ysize, usize, vsize);
     MEMCPY_DCT(client_segment->residuals, cm->curframe->residuals, ysize, usize, vsize);
@@ -133,11 +138,6 @@ int main(int argc, char **argv)
     TRIGGER_DATA_INTERRUPT(remoteInterrupt, server_segment, CMD_CONTINUE, error);
 
     ++framenum;
-
-    // swap frames to get ready for next frame
-    yuv_t *tmp = cm->ref_recons;
-    cm->ref_recons = cm->curframe->recons;
-    cm->curframe->recons = tmp;
   }
 
   clock_gettime(CLOCK_MONOTONIC_RAW, &total_end);

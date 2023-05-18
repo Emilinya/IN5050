@@ -21,10 +21,12 @@ static void c63_write_image(struct c63_common *cm) {
   {
     cm->curframe->keyframe = 1;
     cm->frames_since_keyframe = 0;
+    fprintf(stderr, "Writing frame %d - keyframe\n", cm->framenum);
   }
   else
   {
     cm->curframe->keyframe = 0;
+    fprintf(stderr, "Writing frame %d\n", cm->framenum);
   }
 
   write_frame(cm);
@@ -56,11 +58,7 @@ int main(int argc, char **argv)
 
   struct c63_common *cm = init_c63_enc(args->width, args->height);
   cm->curframe = create_frame(cm);
-  cm->ref_recons = create_yuv(cm);
-
-  int ysize = cm->ypw * cm->yph;
-  int usize = cm->upw * cm->uph;
-  int vsize = cm->vpw * cm->vph;
+  cm->refframe = create_frame(cm);
 
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
@@ -70,7 +68,7 @@ int main(int argc, char **argv)
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(FALSE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
-  cm->ref_recons = client_segment->reference_recons;
+  cm->refframe->recons = client_segment->reference_recons;
   cm->curframe->recons = client_segment->currenct_recons;
   cm->curframe->predicted = client_segment->predicted;
   cm->curframe->residuals = client_segment->residuals;
@@ -112,7 +110,6 @@ int main(int argc, char **argv)
       break;
     }
 
-    fprintf(stderr, "Writing frame %d\n", numframes);
     clock_gettime(CLOCK_MONOTONIC_RAW, &write_start);
     c63_write_image(cm);
     clock_gettime(CLOCK_MONOTONIC_RAW, &write_end);

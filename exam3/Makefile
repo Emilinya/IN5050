@@ -1,5 +1,5 @@
 YUV_FILE=/opt/Media/foreman.yuv
-COMP_FRAMES?=10
+COMP_FRAMES?=101
 PREV_FRAMES=$(shell cat test/fc.txt)
 
 TEGRA=tegra-3
