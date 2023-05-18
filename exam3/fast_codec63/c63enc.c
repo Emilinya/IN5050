@@ -57,7 +57,17 @@ int main(int argc, char **argv)
   struct client_segment *client_segment;
 
   struct c63_common *cm = init_c63_enc(args->width, args->height);
+
+  int ysize = cm->ypw * cm->yph;
+  int usize = cm->upw * cm->uph;
+  int vsize = cm->vpw * cm->vph;
+  int mb_size = cm->mb_rows * cm->mb_cols;
+
   cm->curframe = malloc(sizeof(struct frame));
+  cm->curframe->mbs[Y_COMPONENT] = calloc(mb_size, sizeof(struct macroblock));
+  cm->curframe->mbs[U_COMPONENT] = calloc(mb_size / 4, sizeof(struct macroblock));
+  cm->curframe->mbs[V_COMPONENT] = calloc(mb_size / 4, sizeof(struct macroblock));
+  cm->curframe->residuals = create_dct(cm);
 
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
@@ -66,11 +76,6 @@ int main(int argc, char **argv)
       FALSE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment, &remoteSegment,
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(FALSE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
-
-  cm->curframe->residuals = client_segment->residuals;
-  cm->curframe->mbs[Y_COMPONENT] = client_segment->mbs[Y_COMPONENT];
-  cm->curframe->mbs[U_COMPONENT] = client_segment->mbs[U_COMPONENT];
-  cm->curframe->mbs[V_COMPONENT] = client_segment->mbs[V_COMPONENT];
 
   char *input_file = argv[optind];
   FILE *infile = errcheck_fopen(input_file, "rb");
@@ -81,18 +86,20 @@ int main(int argc, char **argv)
   clock_gettime(CLOCK_MONOTONIC_RAW, &total_start);
 
   /* Encode input frames */
-  int numframes = 0;
+  int framenum = 0;
   while (TRUE)
   {
-    if (!read_yuv(infile, cm, server_segment->image))
-    {
-      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
-      break;
-    }
     // send image to server
-    SCIFlush(NULL, NO_FLAGS);
+    if (framenum == 0) {
+      if (!read_yuv(infile, cm, server_segment->image))
+      {
+        TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
+        break;
+      }
+      SCIFlush(NULL, NO_FLAGS);
 
-    TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
+      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
+    }
 
     // wait until server has encoded image
     clock_gettime(CLOCK_MONOTONIC_RAW, &wait_start);
@@ -106,15 +113,34 @@ int main(int argc, char **argv)
       break;
     }
 
+    // copy data from server to cm
+    MEMCPY_DCT(cm->curframe->residuals, client_segment->residuals, ysize, usize, vsize);
+    MEMCPY_MBS(cm->curframe->mbs, client_segment->mbs, mb_size);
+
+    // we want to minimize the amount that the server waits, so we advance the frame before writing
+    ++framenum;
+    int must_exit = FALSE;
+    if (args->frame_limit && framenum >= args->frame_limit)
+    {
+      must_exit = TRUE;
+    } else if (!read_yuv(infile, cm, server_segment->image)) { 
+      must_exit = TRUE;
+    } else {
+      SCIFlush(NULL, NO_FLAGS);
+      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_CONTINUE, error);
+    }
+
+    if (must_exit) {
+      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
+    }
+
+    // write image
     clock_gettime(CLOCK_MONOTONIC_RAW, &write_start);
     c63_write_image(cm);
     clock_gettime(CLOCK_MONOTONIC_RAW, &write_end);
     write_time += TIME_IN_SECONDS(write_start, write_end);
 
-    ++numframes;
-    if (args->frame_limit && numframes >= args->frame_limit)
-    {
-      TRIGGER_DATA_INTERRUPT(remoteInterrupt, client_segment, CMD_QUIT, error);
+    if (must_exit) {
       break;
     }
   }
@@ -131,6 +157,10 @@ int main(int argc, char **argv)
   fprintf(stderr, "   Memcpy: %f %%\n", memcpy_percent);
 
   free(args);
+  free_dct(cm->curframe->residuals);
+  free(cm->curframe->mbs[Y_COMPONENT]);
+  free(cm->curframe->mbs[U_COMPONENT]);
+  free(cm->curframe->mbs[V_COMPONENT]);
   free(cm->curframe);
   free(cm);
 

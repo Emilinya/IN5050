@@ -34,6 +34,9 @@ int read_yuv(FILE *file, struct c63_common *cm, yuv_t *image);
 yuv_t *create_yuv(struct c63_common *cm);
 void free_yuv(yuv_t *image);
 
+dct_t *create_dct(struct c63_common *cm);
+void free_dct(dct_t *image);
+
 struct frame *create_frame(struct c63_common *cm);
 void destroy_frame(struct frame *f);
 

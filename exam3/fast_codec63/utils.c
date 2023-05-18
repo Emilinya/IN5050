@@ -98,11 +98,29 @@ yuv_t *create_yuv(struct c63_common *cm)
     return yuv;
 }
 
+dct_t *create_dct(struct c63_common *cm)
+{
+    dct_t *dct = malloc(sizeof(dct_t));
+    dct->Ydct = calloc(cm->ypw * cm->yph, sizeof(int16_t));
+    dct->Udct = calloc(cm->upw * cm->uph, sizeof(int16_t));
+    dct->Vdct = calloc(cm->vpw * cm->vph, sizeof(int16_t));
+
+    return dct;
+}
+
 void free_yuv(yuv_t *image)
 {
     free(image->Y);
     free(image->U);
     free(image->V);
+    free(image);
+}
+
+void free_dct(dct_t *image)
+{
+    free(image->Ydct);
+    free(image->Udct);
+    free(image->Vdct);
     free(image);
 }
 
@@ -112,11 +130,7 @@ struct frame *create_frame(struct c63_common *cm)
 
     f->recons = create_yuv(cm);
     f->predicted = create_yuv(cm);
-
-    f->residuals = malloc(sizeof(dct_t));
-    f->residuals->Ydct = calloc(cm->ypw * cm->yph, sizeof(int16_t));
-    f->residuals->Udct = calloc(cm->upw * cm->uph, sizeof(int16_t));
-    f->residuals->Vdct = calloc(cm->vpw * cm->vph, sizeof(int16_t));
+    f->residuals = create_dct(cm);
 
     f->mbs[Y_COMPONENT] =
         calloc(cm->mb_rows * cm->mb_cols, sizeof(struct macroblock));
@@ -137,8 +151,8 @@ void destroy_frame(struct frame *f)
     }
 
     free_yuv(f->recons);
-    free_yuv(f->residuals);
     free_yuv(f->predicted);
+    free_dct(f->residuals);
 
     free(f->mbs[Y_COMPONENT]);
     free(f->mbs[U_COMPONENT]);
