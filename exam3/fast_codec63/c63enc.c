@@ -57,8 +57,7 @@ int main(int argc, char **argv)
   struct client_segment *client_segment;
 
   struct c63_common *cm = init_c63_enc(args->width, args->height);
-  cm->curframe = create_frame(cm);
-  cm->refframe = create_frame(cm);
+  cm->curframe = malloc(sizeof(struct frame));
 
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
@@ -68,9 +67,6 @@ int main(int argc, char **argv)
       &server_segment, &client_segment, cm);
   sisci_create_interrupt(FALSE, args->remote_node, &sd, &localInterrupt, &remoteInterrupt);
 
-  cm->refframe->recons = client_segment->reference_recons;
-  cm->curframe->recons = client_segment->currenct_recons;
-  cm->curframe->predicted = client_segment->predicted;
   cm->curframe->residuals = client_segment->residuals;
   cm->curframe->mbs[Y_COMPONENT] = client_segment->mbs[Y_COMPONENT];
   cm->curframe->mbs[U_COMPONENT] = client_segment->mbs[U_COMPONENT];
@@ -135,6 +131,8 @@ int main(int argc, char **argv)
   fprintf(stderr, "   Memcpy: %f %%\n", memcpy_percent);
 
   free(args);
+  free(cm->curframe);
+  free(cm);
 
   fclose(outfile);
   fclose(infile);

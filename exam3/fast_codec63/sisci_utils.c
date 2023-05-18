@@ -73,7 +73,7 @@ void sisci_init(
     {
         myID = SEGMENT_CLIENT;
         otherID = SEGMENT_SERVER;
-        segmentSize = (1 + 3 * imsize) * sizeof(uint8_t) + imsize * sizeof(int16_t);
+        segmentSize = sizeof(uint8_t) + imsize * sizeof(int16_t);
         segmentSize += (mb_count + mb_count / 2) * mb_size;
     }
 
@@ -118,9 +118,6 @@ void sisci_init(
 
     // create segment structs
     struct client_segment *client_ptr = malloc(sizeof(struct client_segment));
-    client_ptr->reference_recons = malloc(sizeof(yuv_t));
-    client_ptr->currenct_recons = malloc(sizeof(yuv_t));
-    client_ptr->predicted = malloc(sizeof(yuv_t));
     client_ptr->residuals = malloc(sizeof(dct_t));
 
     struct server_segment *server_ptr = malloc(sizeof(struct server_segment));
@@ -129,9 +126,6 @@ void sisci_init(
     // map client segment
     int offset = 0;
     client_ptr->cmd = mapper(isServer, ls, rs, lm, rm, &offset, sizeof(uint8_t), &error);
-    map_yuv(client_ptr->reference_recons, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
-    map_yuv(client_ptr->currenct_recons, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
-    map_yuv(client_ptr->predicted, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
     map_dct(client_ptr->residuals, isServer, ls, rs, lm, rm, &offset, ysize, usize, vsize, &error);
 
     client_ptr->mbs[Y_COMPONENT] = mapper(isServer, ls, rs, lm, rm, &offset, mb_count * mb_size, &error);

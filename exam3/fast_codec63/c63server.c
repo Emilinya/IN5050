@@ -127,9 +127,6 @@ int main(int argc, char **argv)
     encode_time += TIME_IN_SECONDS(encode_start, encode_end);
 
     // copy data from cm to server
-    MEMCPY_YUV(client_segment->reference_recons, cm->refframe->recons, ysize, usize, vsize);
-    MEMCPY_YUV(client_segment->currenct_recons, cm->curframe->recons, ysize, usize, vsize);
-    MEMCPY_YUV(client_segment->predicted, cm->curframe->predicted, ysize, usize, vsize);
     MEMCPY_DCT(client_segment->residuals, cm->curframe->residuals, ysize, usize, vsize);
     MEMCPY_MBS(client_segment->mbs, cm->curframe->mbs, cm->mb_rows * cm->mb_cols);
     SCIFlush(NULL, NO_FLAGS);
@@ -152,6 +149,8 @@ int main(int argc, char **argv)
   fprintf(stderr, "    Memcpy: %f %%\n", memcpy_percent);
 
   free(args);
+  destroy_frame(cm->curframe);
+  free(cm);
 
   SCITerminate();
 

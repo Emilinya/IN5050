@@ -12,13 +12,6 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define TIME_IN_SECONDS(start, end) (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9
 
-#define MEMCPY_YUV(dest_yuv, src_yuv, ysize, usize, vsize) \
-    do { \
-        memcpy(dest_yuv->Y, src_yuv->Y, ysize * sizeof(uint8_t)); \
-        memcpy(dest_yuv->U, src_yuv->U, usize * sizeof(uint8_t)); \
-        memcpy(dest_yuv->V, src_yuv->V, vsize * sizeof(uint8_t)); \
-    } while (0)
-
 #define MEMCPY_DCT(dest_yuv, src_yuv, ysize, usize, vsize) \
     do { \
         memcpy(dest_yuv->Ydct, src_yuv->Ydct, ysize * sizeof(int16_t)); \
