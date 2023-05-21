@@ -72,6 +72,7 @@ int main(int argc, char **argv)
   FILE *outfile = errcheck_fopen(args->output_file, "wb");
   cm->e_ctx.fp = outfile;
 
+  // init SISCI structs
   sisci_init(
       FALSE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment, &remoteSegment,
       &server_segment, &client_segment, cm);

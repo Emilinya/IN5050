@@ -1,6 +1,7 @@
 #include "sisci_utils.h"
 
-void *local_mapper(sci_local_segment_t *segment, sci_map_t *map, int *offset, size_t size, sci_error_t *error)
+void *local_mapper(
+    sci_local_segment_t *segment, sci_map_t *map, int *offset, size_t size, sci_error_t *error)
 {
     void *pointer = (void *)SCIMapLocalSegment(
         *segment, map, *offset, size, NULL, NO_FLAGS, error);
@@ -9,7 +10,8 @@ void *local_mapper(sci_local_segment_t *segment, sci_map_t *map, int *offset, si
     return pointer;
 }
 
-void *remote_mapper(sci_remote_segment_t *segment, sci_map_t *map, int *offset, size_t size, sci_error_t *error)
+void *remote_mapper(
+    sci_remote_segment_t *segment, sci_map_t *map, int *offset, size_t size, sci_error_t *error)
 {
     void *pointer = (void *)SCIMapRemoteSegment(
         *segment, map, *offset, size, NULL, NO_FLAGS, error);
@@ -84,6 +86,7 @@ void sisci_init(
     SCIOpen(sd, NO_FLAGS, &error);
     ERR_CHECK(error, "SCIOpen");
 
+    // create and connect segments
     SCICreateSegment(
         *sd, localSegment, myID, segmentSize,
         NO_CALLBACK, NULL, NO_FLAGS, &error);

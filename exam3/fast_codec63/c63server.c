@@ -95,6 +95,7 @@ int main(int argc, char **argv)
   int usize = cm->upw * cm->uph;
   int vsize = cm->vpw * cm->vph;
 
+  // init SISCI structs
   sisci_init(
       TRUE, args->remote_node, &sd, &localMap, &remoteMap, &localSegment, &remoteSegment,
       &server_segment, &client_segment, cm);
@@ -121,6 +122,7 @@ int main(int argc, char **argv)
       break;
     }
 
+    // encode image
     clock_gettime(CLOCK_MONOTONIC_RAW, &encode_start);
     c63_encode_image(cm, server_segment);
     clock_gettime(CLOCK_MONOTONIC_RAW, &encode_end);
