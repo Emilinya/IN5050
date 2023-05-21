@@ -75,7 +75,7 @@ if [ -z "$PC" ]; then
         PC="in5050-2016-10"
         TEGRA="tegra-3"
     elif [ "$TEGRA" == "tegra-4" ]; then
-        PC="in5050-2014-11"
+        PC="in5050-2016-10"
         TEGRA="tegra-4"
     else
         echo "unknown tegra $TEGRA"
